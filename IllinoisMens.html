@@ -7,51 +7,55 @@
   <!-- Fonts & minimal styling -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+
   <style>
     :root{
-      --bg:#0b1020; --card:#111735; --muted:#6d7490; --text:#eaf0ff;
-      --accent:#7dd3fc; --accent2:#a78bfa; --ok:#34d399; --warn:#fbbf24;
-      --chip:#1b2248;
+      --bg:#0b1020; --card:#111735; --muted:#7e86a6; --text:#eaf0ff;
+      --chip:#19214a; --border:#222b5a; --hdr:#0d1330;
+      --good:#34d399; --warn:#fbbf24;
     }
     *{box-sizing:border-box}
     body{margin:0;background:linear-gradient(180deg,#0b1020 0%, #0c163a 100%); color:var(--text); font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif}
-    .wrap{max-width:1200px; margin:28px auto; padding:0 16px;}
-    h1{font-size:28px;margin:0 0 8px 0;font-weight:800;letter-spacing:.2px}
+    .wrap{max-width:1300px; margin:28px auto; padding:0 16px;}
+    h1{font-size:28px;margin:0 0 6px 0;font-weight:800;letter-spacing:.2px}
     .sub{color:var(--muted); margin-bottom:18px}
-    .controls{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:12px 0 24px}
-    .control{background:var(--card); padding:10px 12px; border-radius:12px; display:flex; gap:8px; align-items:center; border:1px solid #212a55}
-    label{font-size:12px; color:var(--muted)}
-    input,select,button{background:#0d1330; color:var(--text); border:1px solid #263066; border-radius:10px; padding:8px 10px; font-size:14px}
-    button{cursor:pointer}
-    .grid{display:grid; grid-template-columns:1fr; gap:16px}
-    @media (min-width:900px){ .grid{grid-template-columns: 1fr 1fr} }
-    .section{background:var(--card); border:1px solid #1f2753; border-radius:16px; padding:16px 16px 6px}
-    .section h2{margin:0 0 10px 0; font-size:20px; font-weight:800}
-    .row{display:flex; gap:10px; align-items:center; justify-content:space-between; padding:10px; border-radius:12px; background:rgba(255,255,255,.02); border:1px solid #1a2250}
-    .row + .row{margin-top:8px}
-    .team{display:flex; align-items:center; gap:10px; min-width:280px}
-    .name{font-weight:700}
-    .muted{color:var(--muted)}
-    .chips{display:flex; gap:6px; flex-wrap:wrap}
-    .chip{background:var(--chip); color:#dbe5ff; padding:2px 8px; border-radius:999px; font-size:12px; border:1px solid #273070}
-    .chip.good{border-color:#245f45; background:rgba(52,211,153,.12); color:#c8ffe8}
+
+    /* Section cards */
+    .section{background:var(--card); border:1px solid var(--border); border-radius:16px; padding:12px; margin-bottom:16px}
+    .section h2{margin:0 0 4px 0; font-size:20px; font-weight:800}
+    .meta{display:flex; align-items:center; gap:8px; color:var(--muted); font-size:12px; margin-bottom:10px}
+
+    /* Week table */
+    .weekboard{width:100%; border-collapse:collapse; overflow:hidden; border-radius:12px}
+    .weekboard thead th{background:var(--hdr); color:#cfe2ff; font-weight:700; font-size:12px; padding:10px; border-bottom:1px solid var(--border); text-align:left}
+    .weekboard tbody td, .weekboard tbody th{padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:top; font-size:13px}
+    .teamCol{white-space:nowrap}
+    .rankchips{display:flex; gap:6px; flex-wrap:wrap; margin-top:4px}
+    .chip{display:inline-block; background:var(--chip); border:1px solid #2a3472; color:#dbe5ff; padding:2px 8px; border-radius:999px; font-size:11px}
+    .chip.good{border-color:#1f5e44; background:rgba(52,211,153,.12); color:#c9ffe8}
     .chip.warn{border-color:#6b4b12; background:rgba(251,191,36,.12); color:#ffe9b8}
-    .games{flex:1; display:flex; flex-direction:column; gap:6px}
-    .g{display:flex; gap:10px; align-items:center; font-size:13px}
-    .vs{opacity:.9}
-    .pill{padding:2px 6px; border-radius:6px; font-weight:600; font-size:11px; border:1px solid #2b356d; background:#0e1540}
+
+    .game{display:flex; flex-direction:column; gap:2px; margin-bottom:6px}
+    .line{display:flex; gap:6px; align-items:center}
+    .pill{padding:1px 6px; border-radius:6px; font-weight:700; font-size:10px; border:1px solid #2b356d; background:#0e1540}
     .final{color:#c4ffd8; border-color:#2a5e48; background:#0f2b24}
     .live{color:#ffedd5; border-color:#7a4e0d; background:#2a1a05}
-    .hdr{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px}
-    .hint{font-size:12px; color:var(--muted)}
+    .muted{color:var(--muted)}
+    .tiny{font-size:11px}
+    .nowrap{white-space:nowrap}
+
+    /* Sticky team column on wide screens (nice for horizontal scanning) */
+    @media (min-width: 900px){
+      .weekboard thead th.sticky, .weekboard tbody th.sticky{
+        position:sticky; left:0; z-index:2; background:linear-gradient(90deg, var(--hdr) 0%, var(--hdr) 70%, rgba(13,19,48,0) 100%);
+      }
+      .weekboard tbody th.sticky{background:linear-gradient(90deg, var(--card) 0%, var(--card) 70%, rgba(17,23,53,0) 100%); z-index:1}
+      .scroller{overflow-x:auto}
+    }
+
     .badge{font-size:11px; padding:2px 6px; border-radius:999px; background:#0d1330; border:1px solid #28306a; color:#cfe2ff}
-    .table{width:100%; border-collapse:collapse; margin-top:8px}
-    .table th,.table td{padding:8px; border-bottom:1px solid #1a2250; font-size:13px; text-align:left}
-    .table th{color:#aab7ff; font-weight:600}
-    .small{font-size:12px}
-    .footer{color:var(--muted); font-size:12px; margin:18px 0 8px}
-    a{color:var(--accent)}
   </style>
+
   <!-- PapaParse & Day.js -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
@@ -62,68 +66,65 @@
 <body>
   <div class="wrap">
     <h1>College Hoops — Weekly Board</h1>
-    <div class="sub">AP Top 25 • Illinois OOC • Big Ten — auto-built from your live Google Sheet CSVs.</div>
+    <div class="sub" id="weekLabel">Loading week…</div>
 
-    <div class="controls">
-      <div class="control">
-        <div style="display:flex;flex-direction:column;gap:4px">
-          <label>Week of (Mon–Sun, ET)</label>
-          <input type="date" id="weekStart">
-        </div>
-        <button id="apply">Apply</button>
-        <span class="hint">Pick any date in the desired week (we’ll snap to Monday).</span>
+    <!-- AP Top N -->
+    <section class="section">
+      <h2 id="apHeader">AP Top — Weekly Slate</h2>
+      <div class="meta">
+        <span class="badge" id="apCount">0 teams</span>
+        <span class="muted tiny">AP / Coaches / KenPom shown for each team</span>
       </div>
-      <div class="control">
-        <div class="chips" id="loadStatus"><span class="chip">Loading data…</span></div>
+      <div class="scroller">
+        <table class="weekboard" id="apTable">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
       </div>
-    </div>
-
-    <div class="grid">
-      <section class="section" id="apTop25">
-        <div class="hdr">
-          <h2>AP Top 25 — Weekly Slate</h2>
-          <span class="badge" id="apBadge">0 teams</span>
-        </div>
-        <div id="apList"></div>
-      </section>
-
-      <section class="section" id="illinoisOOC">
-        <div class="hdr">
-          <h2>Illinois OOC Opponents — Weekly Slate</h2>
-          <span class="badge" id="oocBadge">0 opponents</span>
-        </div>
-        <div id="oocList"></div>
-      </section>
-    </div>
-
-    <section class="section" style="margin-top:16px">
-      <div class="hdr">
-        <h2>Big Ten — Standings & Week Schedule</h2>
-        <span class="badge" id="b1gBadge">0 teams</span>
-      </div>
-
-      <table class="table" id="b1gTable">
-        <thead>
-          <tr>
-            <th>Team</th>
-            <th>Overall</th>
-            <th>Conf</th>
-            <th>AP / Coaches / KP</th>
-            <th>This Week</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
     </section>
 
-    <div class="footer small">
-      Sources: AP & Coaches Top 25, Team Schedules, Standings, KenPom (Team2 used as the canonical match). Times shown in ET.  
+    <!-- Illinois OOC -->
+    <section class="section">
+      <h2>Illinois OOC Opponents — Weekly Slate</h2>
+      <div class="meta">
+        <span class="badge" id="oocCount">0 opponents</span>
+        <span class="muted tiny">Opponents list from your spec</span>
+      </div>
+      <div class="scroller">
+        <table class="weekboard" id="oocTable">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Big Ten -->
+    <section class="section">
+      <h2>Big Ten — Standings & Weekly Slate</h2>
+      <div class="meta">
+        <span class="badge" id="b1gCount">0 teams</span>
+        <span class="muted tiny">Sorted by OverallPct (then wins)</span>
+      </div>
+      <div class="scroller">
+        <table class="weekboard" id="b1gTable">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <div class="muted tiny" style="margin-top:8px">
+      Sources: AP & Coaches Top 25, Team Schedules, Standings, KenPom (Team2 used as the canonical match). Times shown in ET.
     </div>
   </div>
 
   <script>
-  // ====== CONFIG ======
-  const TZ = "America/New_York"; // ET as requested by your inputs (StartET)
+  // ========= CONFIG =========
+  // 1) Set your week here (any Monday in ET):
+  const WEEK_START = "2025-11-03"; // <-- change this; must be a Monday (ET)
+  const TZ = "America/New_York";
+
+  // 2) Data sources
   const URLS = {
     ap: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSkcLAiNAH3ccrZEFjr8ONOP1ktnnVczk8IqZ1sZ65HcxxRwAQUD75cKz9eh4h7WiV6puPycS0o56FL/pub?gid=373873164&single=true&output=csv",
     coaches: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSkcLAiNAH3ccrZEFjr8ONOP1ktnnVczk8IqZ1sZ65HcxxRwAQUD75cKz9eh4h7WiV6puPycS0o56FL/pub?gid=477166523&single=true&output=csv",
@@ -132,23 +133,21 @@
     kenpom: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSpEizCaqirmqDs-G7DoI70aab-WxepYTQz1myBK79BPZQaznnx4PYW3AeTkm7lWPRUv8uLParc8PpZ/pub?gid=917670909&single=true&output=csv"
   };
 
-  // Your Illinois OOC list (as given by you)
+  // 3) Illinois OOC list
   const ILLINOIS_OOC = [
     "Jackson State","Florida Gulf Coast","Texas Tech","Colgate","Alabama",
     "LIU Brooklyn","UT-Rio Grande Valley","UConn","Tennessee","Missouri","Southern"
   ];
 
-  // Helpful alias corrections for tricky schedule/team spellings (expand as needed)
+  // 4) Name normalization + aliases
   const ALIASES = new Map([
     ["uconn","connecticut"],
-    ["utsa","ut san antonio"],
     ["ut-rio grande valley","texas rio grande valley"],
-    ["liubrooklyn","liu brooklyn"], ["liu","liu brooklyn"],
-    ["st johns","st. john's"], ["saint johns","st. john's"],
-    ["jackson st","jackson state"],
-    ["texas a&m","texas a&m"], // placeholder to show pattern
+    ["liubrooklyn","liu brooklyn"],
+    ["st johns","st. john's"],
+    ["saint johns","st. john's"],
+    ["jackson st","jackson state"]
   ]);
-
   function normalizeName(s){
     if(!s) return "";
     let t = String(s).trim().toLowerCase();
@@ -159,13 +158,14 @@
     t = t.replace(/\bsaint\b/g,"st");
     t = t.replace(/-+/g," ");
     t = t.trim();
-    // alias override
     const alias = ALIASES.get(t.replace(/\s/g,""));
     return alias ? alias : t;
   }
 
-  // Fetch CSV -> array of objects
-  async function fetchCSV(url){
+  // ===== Utilities =====
+  function safeInt(x){ const n = parseInt(x,10); return Number.isFinite(n) ? n : null; }
+
+  function fetchCSV(url){
     return new Promise((resolve,reject)=>{
       Papa.parse(url, {
         download:true, header:true, dynamicTyping:false, skipEmptyLines:true,
@@ -175,45 +175,26 @@
     });
   }
 
-  // Build matching maps using KenPom Team2 as canonical
-  function buildTeamKeyMaps(kenpomRows){
-    const byTeam2 = new Map(); // canonical
-    kenpomRows.forEach(r=>{
-      const key = normalizeName(r.Team2 || r.Team || "");
-      if(!key) return;
-      byTeam2.set(key, {
-        kpRank: safeInt(r.Rank),
-        team2: r.Team2, teamRaw: r.Team, conference: r.Conference
-      });
-    });
-    return { byTeam2 };
+  function mondayOf(dateStr){
+    const d = dayjs.tz(dateStr, TZ).startOf('day');
+    const dow = d.day(); // 0=Sun
+    const off = (dow===0) ? -6 : (1 - dow);
+    return d.add(off,'day');
+  }
+  function sundayOf(mon){ return mon.add(6,'day').endOf('day'); }
+
+  function weekDays(mon){
+    return Array.from({length:7}, (_,i)=> mon.add(i,'day'));
   }
 
-  function safeInt(x){ const n = parseInt(x,10); return Number.isFinite(n) ? n : null; }
-
-  function indexRanks(rows, keyField="Team", valueField="Rank"){
-    const m = new Map();
-    rows.forEach(r=>{
-      const k = normalizeName(r[keyField]);
-      const v = safeInt(r[valueField]);
-      if(k && v != null) m.set(k, v);
-    });
-    return m;
+  function formatDayHead(d){ return d.format("ddd M/D"); }
+  function formatTimeET(startET){
+    if(!startET) return "";
+    const d = dayjs.tz(startET, TZ);
+    return d.isValid() ? d.format("h:mm A") : String(startET);
   }
 
-  function makeRankBadge(ap, coach, kp){
-    const apTxt = ap? `AP #${ap}` : "AP —";
-    const cTxt = coach? `Coaches #${coach}` : "Coaches —";
-    const kpTxt = kp? `KP #${kp}` : "KP —";
-    return `
-      <div class="chips">
-        <span class="chip">${apTxt}</span>
-        <span class="chip">${cTxt}</span>
-        <span class="chip ${kp && kp<=25 ? 'good':''}">${kpTxt}</span>
-      </div>`;
-  }
-
-  function statusChip(status){
+  function statusPill(status){
     if(!status) return "";
     const s = String(status).toLowerCase();
     if(s.includes("final")) return `<span class="pill final">FINAL</span>`;
@@ -221,32 +202,7 @@
     return `<span class="pill">${status}</span>`;
   }
 
-  function formatTimeET(startET){
-    if(!startET) return "";
-    // StartET is already ET; just tidy to "ddd M/D h:mm A"
-    const d = dayjs.tz(startET, TZ);
-    if(!d.isValid()) return startET;
-    return d.format("ddd M/D h:mm A");
-  }
-
-  function inWeekRange(startET, weekStart, weekEnd){
-    const d = dayjs.tz(startET, TZ);
-    return d.isAfter(weekStart.subtract(1,'ms')) && d.isBefore(weekEnd.add(1,'ms'));
-  }
-
-  function mondayOfWeek(anyDateET){
-    const d = anyDateET.startOf('day');
-    const dow = d.day(); // 0=Sun
-    const offset = (dow===0) ? -6 : (1 - dow);
-    return d.add(offset,'day');
-  }
-
-  function sundayOfWeek(mon){
-    return mon.add(6,'day').endOf('day');
-  }
-
-  // Build schedule index: nameKey -> [games]
-  function indexSchedule(rows){
+  function buildScheduleIndex(rows){
     const byTeam = new Map();
     function push(name, game){
       const k = normalizeName(name);
@@ -259,14 +215,9 @@
         id: r.GameId,
         start: r.StartET,
         status: r.Status,
-        home: r.Home,
-        away: r.Away,
-        homeScore: r.HomeScore,
-        awayScore: r.AwayScore,
-        tv: r.TV,
-        venue: r.Venue,
-        city: r.City,
-        state: r.State
+        home: r.Home, away: r.Away,
+        homeScore: r.HomeScore, awayScore: r.AwayScore,
+        tv: r.TV, venue: r.Venue, city: r.City, state: r.State
       };
       push(r.Home, {...g, isHome:true, opp:r.Away});
       push(r.Away, {...g, isHome:false, opp:r.Home});
@@ -274,192 +225,191 @@
     return byTeam;
   }
 
-  function renderGameLine(g){
-    const time = formatTimeET(g.start);
-    const score = (g.homeScore || g.awayScore) ? ` (${g.awayScore}–${g.homeScore})` : "";
-    const vs = g.isHome ? "vs" : "@";
-    const tv = g.tv ? ` • ${g.tv}` : "";
+  function gamesOnDayFor(team, day, schedIndex){
+    const k = normalizeName(team);
+    const start = day.startOf('day');
+    const end = day.endOf('day');
+    const arr = schedIndex.get(k) || [];
+    return arr.filter(g=>{
+      const t = dayjs.tz(g.start, TZ);
+      return t.isAfter(start.subtract(1,'ms')) && t.isBefore(end.add(1,'ms'));
+    }).sort((a,b)=> dayjs.tz(a.start,TZ)-dayjs.tz(b.start,TZ));
+  }
+
+  function indexRanks(rows, keyField="Team", valueField="Rank"){
+    const m = new Map();
+    rows.forEach(r=>{
+      const k = normalizeName(r[keyField]);
+      const v = safeInt(r[valueField]);
+      if(k && v != null) m.set(k, v);
+    });
+    return m;
+  }
+
+  function buildKenPomMap(rows){
+    const m = new Map(); // key: Team2 normalized -> rank
+    rows.forEach(r=>{
+      const k = normalizeName(r.Team2 || r.Team || "");
+      const v = safeInt(r.Rank);
+      if(k && v != null) m.set(k, v);
+    });
+    return m;
+  }
+
+  function rankChips(teamName, apMap, ccMap, kpMap){
+    const k = normalizeName(teamName);
+    const ap = apMap.get(k) ?? null;
+    const cc = ccMap.get(k) ?? null;
+    const kp = kpMap.get(k) ?? null;
     return `
-      <div class="g">
-        ${statusChip(g.status)}
-        <span class="vs">${time}</span>
-        <span>${vs} <strong>${g.opp}</strong>${score}${tv}</span>
-        <span class="muted">— ${g.city || ""}${g.state ? ", "+g.state:""}</span>
+      <div class="rankchips">
+        <span class="chip">${ap?`AP #${ap}`:"AP —"}</span>
+        <span class="chip">${cc?`Coaches #${cc}`:"Coaches —"}</span>
+        <span class="chip ${kp && kp<=25?'good':''}">${kp?`KP #${kp}`:"KP —"}</span>
       </div>
     `;
   }
 
-  function attachRanksToName(name, rankAP, rankCoaches, byTeam2){
-    const key = normalizeName(name);
-    const kp = byTeam2.get(key)?.kpRank ?? null;
-    const ap = rankAP.get(key) ?? null;
-    const cc = rankCoaches.get(key) ?? null;
-    return { ap, coaches: cc, kp };
+  function renderDayCell(team, day, schedIndex){
+    const games = gamesOnDayFor(team, day, schedIndex);
+    if(!games.length) return `<div class="muted tiny">—</div>`;
+    return games.map(g=>{
+      const tv = g.tv ? ` • ${g.tv}` : "";
+      const score = (g.homeScore || g.awayScore) ? ` (${g.awayScore}–${g.homeScore})` : "";
+      const atvs = g.isHome ? "vs" : "@";
+      return `
+        <div class="game">
+          <div class="line">
+            ${statusPill(g.status)}
+            <span class="nowrap tiny">${formatTimeET(g.start)}</span>
+          </div>
+          <div class="tiny">${atvs} <strong>${g.opp}</strong>${score}${tv}</div>
+          <div class="tiny muted">— ${g.city || ""}${g.state?`, ${g.state}`:""}</div>
+        </div>
+      `;
+    }).join("");
   }
 
-  // ---------- MAIN ----------
+  function renderWeekHeader(tableEl, days, showRecordCols=false){
+    const thead = tableEl.querySelector("thead");
+    const dayHeads = days.map(d=> `<th>${formatDayHead(d)}</th>`).join("");
+    thead.innerHTML = `
+      <tr>
+        <th class="sticky teamCol">Team</th>
+        ${showRecordCols ? `<th>Overall</th><th>Conf</th><th>AP / Coaches / KP</th>` : `<th>AP / Coaches / KP</th>`}
+        ${dayHeads}
+      </tr>
+    `;
+  }
+
+  function parseWL(s){ const m = String(s||"").match(/(\d+)\D+(\d+)/); return m ? {w:+m[1], l:+m[2]} : {w:0,l:0}; }
+
   (async function(){
-    const status = document.getElementById('loadStatus');
-    const weekStartInput = document.getElementById('weekStart');
-    const applyBtn = document.getElementById('apply');
-
-    // Default to current week's Monday in ET
-    const nowET = dayjs().tz(TZ);
-    const defaultMon = mondayOfWeek(nowET);
-    weekStartInput.value = defaultMon.format("YYYY-MM-DD");
-
-    function setStatus(msg){ status.innerHTML = `<span class="chip">${msg}</span>`; }
+    const mon = mondayOf(WEEK_START);
+    const sun = sundayOf(mon);
+    const days = weekDays(mon);
+    document.getElementById("weekLabel").textContent = `Week of ${mon.format("dddd, MMM D, YYYY")} – ${sun.format("dddd, MMM D, YYYY")} (ET)`;
 
     try{
-      setStatus("Loading KenPom…");
-      const kenpom = await fetchCSV(URLS.kenpom);
-      const { byTeam2 } = buildTeamKeyMaps(kenpom);
+      // Load all data
+      const [kenpom, ap, coaches, standings, schedule] = await Promise.all([
+        fetchCSV(URLS.kenpom),
+        fetchCSV(URLS.ap),
+        fetchCSV(URLS.coaches),
+        fetchCSV(URLS.standings),
+        fetchCSV(URLS.schedule)
+      ]);
 
-      setStatus("Loading AP & Coaches…");
-      const ap = await fetchCSV(URLS.ap);
-      const coaches = await fetchCSV(URLS.coaches);
-      const apTop = ap.filter(r=>safeInt(r.Rank)&&safeInt(r.Rank)<=25);
-      const apRankMap = indexRanks(ap, "Team", "Rank");
-      const coachesRankMap = indexRanks(coaches, "Team", "Rank");
+      // Indexes / maps
+      const kpMap = buildKenPomMap(kenpom);
+      const apMap = indexRanks(ap, "Team", "Rank");
+      const ccMap = indexRanks(coaches, "Team", "Rank");
+      const schedIndex = buildScheduleIndex(schedule);
 
-      setStatus("Loading Standings…");
-      const standings = await fetchCSV(URLS.standings);
+      // ===== AP Top N =====
+      const apTop = ap.filter(r=> safeInt(r.Rank));
+      const apN = apTop.length;
+      document.getElementById("apHeader").textContent = `AP Top ${apN} — Weekly Slate`;
+      document.getElementById("apCount").textContent = `${apN} teams`;
 
-      setStatus("Loading Schedules…");
-      const schedule = await fetchCSV(URLS.schedule);
-      const schedIndex = indexSchedule(schedule);
+      const apTable = document.getElementById("apTable");
+      renderWeekHeader(apTable, days, /*showRecordCols*/ false);
 
-      setStatus("Rendering…");
+      const apTbody = apTable.querySelector("tbody");
+      apTbody.innerHTML = apTop.map(r=>{
+        const team = r.Team;
+        const chips = rankChips(team, apMap, ccMap, kpMap);
+        const dayCells = days.map(d=> `<td>${renderDayCell(team, d, schedIndex)}</td>`).join("");
+        return `
+          <tr>
+            <th class="sticky teamCol"><div><strong>${r.Rank ? `#${r.Rank} `:""}${team}</strong>${chips}</div></th>
+            <td>${/* placeholder to align with header "AP/Coaches/KP" in compact layout */''}</td>
+            ${dayCells}
+          </tr>
+        `;
+      }).join("");
 
-      function getWeekBounds(){
-        const chosen = dayjs.tz(weekStartInput.value, TZ);
-        const mon = mondayOfWeek(chosen);
-        const sun = sundayOfWeek(mon);
-        return { mon, sun };
-      }
+      // After populating rows, remove the placeholder cell header:
+      // We already created a fixed header with a single "AP / Coaches / KP" column before days.
+      // So each row needs exactly one TD for that column.
+      // The chips are already inside the sticky Team cell, but we still keep the column for alignment.
 
-      function gamesForWeek(teamName, mon, sun){
-        const k = normalizeName(teamName);
-        const arr = schedIndex.get(k) || [];
-        return arr.filter(g=> inWeekRange(g.start, mon, sun))
-                  .sort((a,b)=> dayjs.tz(a.start,TZ)-dayjs.tz(b.start,TZ));
-      }
+      // ===== Illinois OOC =====
+      document.getElementById("oocCount").textContent = `${ILLINOIS_OOC.length} opponents`;
+      const oocTable = document.getElementById("oocTable");
+      renderWeekHeader(oocTable, days, /*showRecordCols*/ false);
+      const oocTbody = oocTable.querySelector("tbody");
+      oocTbody.innerHTML = ILLINOIS_OOC.map(name=>{
+        const chips = rankChips(name, apMap, ccMap, kpMap);
+        const dayCells = days.map(d=> `<td>${renderDayCell(name, d, schedIndex)}</td>`).join("");
+        return `
+          <tr>
+            <th class="sticky teamCol"><div><strong>${name}</strong>${chips}</div></th>
+            <td></td>
+            ${dayCells}
+          </tr>
+        `;
+      }).join("");
 
-      function renderAP(){
-        const {mon,sun} = getWeekBounds();
-        const apBadge = document.getElementById('apBadge');
-        const list = document.getElementById('apList');
-        apBadge.textContent = `${apTop.length} teams`;
-
-        list.innerHTML = apTop.map(r=>{
-          const team = r.Team;
-          const rks = attachRanksToName(team, apRankMap, coachesRankMap, byTeam2);
-          const games = gamesForWeek(team, mon, sun);
-          const gamesHtml = games.length ? games.map(renderGameLine).join("") : `<span class="muted small">No games this week.</span>`;
-          return `
-            <div class="row">
-              <div class="team">
-                <div class="name">${r.Rank ? `#${r.Rank} `: ""}${team}</div>
-              </div>
-              <div class="games">${gamesHtml}</div>
-              ${makeRankBadge(rks.ap, rks.coaches, rks.kp)}
-            </div>
-          `;
-        }).join("");
-      }
-
-      function renderOOC(){
-        const {mon,sun} = getWeekBounds();
-        const oocBadge = document.getElementById('oocBadge');
-        const list = document.getElementById('oocList');
-        oocBadge.textContent = `${ILLINOIS_OOC.length} opponents`;
-
-        list.innerHTML = ILLINOIS_OOC.map(name=>{
-          const rks = attachRanksToName(name, apRankMap, coachesRankMap, byTeam2);
-          const games = gamesForWeek(name, mon, sun);
-          const gamesHtml = games.length ? games.map(renderGameLine).join("") : `<span class="muted small">No games this week.</span>`;
-          return `
-            <div class="row">
-              <div class="team"><div class="name">${name}</div></div>
-              <div class="games">${gamesHtml}</div>
-              ${makeRankBadge(rks.ap, rks.coaches, rks.kp)}
-            </div>
-          `;
-        }).join("");
-      }
-
-      function renderB1G(){
-        const {mon,sun} = getWeekBounds();
-        const tbody = document.querySelector("#b1gTable tbody");
-        const b1gBadge = document.getElementById('b1gBadge');
-
-        // Filter Big Ten; common labels are "B10" or "Big Ten" depending on your sheet.
-        const bigTenRows = standings.filter(r=>{
-          const c = String(r.Conference||"").toLowerCase();
-          return c.includes("big ten") || c === "b10" || c.includes("big-ten");
-        });
-
-        // Sort by OverallPct desc then Overall (wins) desc
-        function parseWL(s){
-          // format "W-L" or "W–L"
-          const m = String(s||"").match(/(\d+)\D+(\d+)/);
-          return m? {w:+m[1], l:+m[2]} : {w:0,l:0};
-        }
-        bigTenRows.sort((a,b)=>{
-          const ap = parseFloat(a.OverallPct||"0") || 0;
-          const bp = parseFloat(b.OverallPct||"0") || 0;
-          if(bp!==ap) return bp-ap;
-          const aw = parseWL(a.Overall).w, bw = parseWL(b.Overall).w;
-          return bw-aw;
-        });
-
-        b1gBadge.textContent = `${bigTenRows.length} teams`;
-
-        tbody.innerHTML = bigTenRows.map(r=>{
-          const team = r.Team;
-          const rks = attachRanksToName(team, apRankMap, coachesRankMap, byTeam2);
-          const games = gamesForWeek(team, mon, sun);
-          const gamesHtml = games.length ? games.map(renderGameLine).join("") : `<span class="muted small">—</span>`;
-          const rankText = [
-            rks.ap? `#${rks.ap}`:'—',
-            rks.coaches? `#${rks.coaches}`:'—',
-            rks.kp? `#${rks.kp}`:'—'
-          ].join(" / ");
-
-          return `
-            <tr>
-              <td><strong>${team}</strong></td>
-              <td>${r.Overall || "—"} <span class="muted small">(${(parseFloat(r.OverallPct)||0).toFixed(3)})</span></td>
-              <td>${r.ConfWL || "—"} <span class="muted small">(${(parseFloat(r.ConfPct)||0).toFixed(3)})</span></td>
-              <td>${rankText}</td>
-              <td>${gamesHtml}</td>
-            </tr>
-          `;
-        }).join("");
-      }
-
-      function renderAll(){
-        renderAP();
-        renderOOC();
-        renderB1G();
-      }
-
-      // Initial render & hook up events
-      renderAll();
-      setStatus("Ready");
-
-      applyBtn.addEventListener('click', ()=>{
-        // Snap to Monday if user picked non-Mon
-        const chosen = dayjs.tz(weekStartInput.value, TZ);
-        const mon = mondayOfWeek(chosen);
-        weekStartInput.value = mon.format("YYYY-MM-DD");
-        renderAll();
+      // ===== Big Ten =====
+      const bigTenRows = standings.filter(r=>{
+        const c = String(r.Conference||"").toLowerCase();
+        return c.includes("big ten") || c === "b10" || c.includes("big-ten");
       });
 
-    } catch (e){
-      console.error(e);
-      setStatus("Error loading data. Check console.");
-      alert("Error loading one or more CSVs. See console for details.");
+      bigTenRows.sort((a,b)=>{
+        const apct = parseFloat(a.OverallPct||"0") || 0;
+        const bpct = parseFloat(b.OverallPct||"0") || 0;
+        if(bpct!==apct) return bpct - apct;
+        return parseWL(b.Overall).w - parseWL(a.Overall).w;
+      });
+
+      document.getElementById("b1gCount").textContent = `${bigTenRows.length} teams`;
+
+      const b1gTable = document.getElementById("b1gTable");
+      renderWeekHeader(b1gTable, days, /*showRecordCols*/ true);
+      const b1gBody = b1gTable.querySelector("tbody");
+      b1gBody.innerHTML = bigTenRows.map(r=>{
+        const team = r.Team;
+        const chipsCell = `${rankChips(team, apMap, ccMap, kpMap)}`;
+        const dayCells = days.map(d=> `<td>${renderDayCell(team, d, schedIndex)}</td>`).join("");
+        const overallPct = (parseFloat(r.OverallPct)||0).toFixed(3);
+        const confPct = (parseFloat(r.ConfPct)||0).toFixed(3);
+        return `
+          <tr>
+            <th class="sticky teamCol"><strong>${team}</strong></th>
+            <td>${r.Overall || "—"} <span class="muted tiny">(${overallPct})</span></td>
+            <td>${r.ConfWL || "—"} <span class="muted tiny">(${confPct})</span></td>
+            <td>${chipsCell}</td>
+            ${dayCells}
+          </tr>
+        `;
+      }).join("");
+
+    }catch(err){
+      console.error(err);
+      document.getElementById("weekLabel").textContent = "Error loading one or more CSVs. See console.";
+      alert("Error loading one or more CSVs. Open the browser console for details.");
     }
   })();
   </script>
