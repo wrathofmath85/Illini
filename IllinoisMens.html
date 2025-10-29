@@ -218,6 +218,32 @@
     return `<span class="pill">${status}</span>`;
   }
 
+  // ---- TV extraction: robustly coalesce across common headers
+  function extractTVFromRow(r){
+    const candidates = [
+      r.TV, r.Tv, r.tv, r.Network, r.Television, r.Broadcast, r.Channel,
+      r["Time/TV"], r["Time / TV"], r.TimeTV, r["Time Tv"], r["Time tv"]
+    ];
+    let tv = (candidates.find(v => v && String(v).trim()) || "").toString().trim();
+
+    // If the sheet separates streaming, include that too
+    const streaming = (r.Streaming || r["Streams"] || r["Stream"] || "").toString().trim();
+
+    // Clean stray em dashes / placeholders
+    const clean = s => s.replace(/^—+$/,"").replace(/^\s*-\s*$/,"").trim();
+
+    tv = clean(tv);
+    const streamClean = clean(streaming);
+
+    if(tv && streamClean){
+      return `${tv}, ${streamClean}`;
+    }else if(streamClean){
+      return streamClean;
+    }else{
+      return tv; // may be empty string
+    }
+  }
+
   function buildScheduleIndex(rows){
     const byTeam = new Map();
     function push(name, game){
@@ -233,7 +259,8 @@
         status: r.Status,
         home: r.Home, away: r.Away,
         homeScore: r.HomeScore, awayScore: r.AwayScore,
-        tv: r.TV, venue: r.Venue, city: r.City, state: r.State
+        tv: extractTVFromRow(r),  // <<<<<<<<<< ALWAYS FILLED WHEN AVAILABLE
+        venue: r.Venue, city: r.City, state: r.State
       };
       push(r.Home, {...g, isHome:true, opp:r.Away});
       push(r.Away, {...g, isHome:false, opp:r.Home});
@@ -318,7 +345,7 @@
     const games = gamesOnDayFor(team, day, schedIndex);
     if(!games.length) return `<div class="muted tiny">—</div>`;
     return games.map(g=>{
-      const tv = g.tv ? ` • ${g.tv}` : "";
+      const tvPiece = g.tv ? ` • ${g.tv}` : "";
       const score = (g.homeScore || g.awayScore) ? ` (${g.awayScore}–${g.homeScore})` : "";
       const atvs = g.isHome ? "vs" : "@";
       const oppName = hlIllini(g.opp);
@@ -329,7 +356,7 @@
             ${statusPill(g.status)}
             <span class="nowrap tiny">${formatTimeET(g.start)}</span>
           </div>
-          <div class="tiny">${atvs} <strong>${oppName}</strong>${oppRanks}${score}${tv}</div>
+          <div class="tiny">${atvs} <strong>${oppName}</strong>${oppRanks}${score}${tvPiece}</div>
           <div class="tiny muted">— ${g.city || ""}${g.state?`, ${g.state}`:""}</div>
         </div>
       `;
