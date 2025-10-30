@@ -14,6 +14,12 @@
       --chip:#19214a; --border:#222b5a; --hdr:#0d1330;
       --good:#34d399; --warn:#fbbf24;
       --illini-orange:#E84A27; --illini-blue:#13294B;
+
+      /* outcome tints */
+      --win-bg: rgba(52,211,153,.10);
+      --win-bd: #1f5e44;
+      --loss-bg: rgba(239,68,68,.10);
+      --loss-bd: #6b1f1f;
     }
     *{box-sizing:border-box}
     body{margin:0;background:linear-gradient(180deg,#0b1020 0%, #0c163a 100%); color:var(--text); font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif}
@@ -38,7 +44,9 @@
     .apmeta{display:flex; gap:6px; flex-wrap:wrap; margin-top:6px}
     .apmeta .chip{border-color:#39418d}
 
-    .game{display:flex; flex-direction:column; gap:2px; margin-bottom:6px}
+    .game{display:flex; flex-direction:column; gap:2px; margin-bottom:6px; border:1px solid transparent; border-radius:10px; padding:6px}
+    .game.win{background:var(--win-bg); border-color:var(--win-bd)}
+    .game.loss{background:var(--loss-bg); border-color:var(--loss-bd)}
     .line{display:flex; gap:6px; align-items:center; flex-wrap:wrap}
     .pill{padding:1px 6px; border-radius:6px; font-weight:700; font-size:10px; border:1px solid #2b356d; background:#0e1540}
     .final{color:#c4ffd8; border-color:#2a5e48; background:#0f2b24}
@@ -378,22 +386,53 @@
   }
   function hlIllini(name){ return isIllini(name) ? `<span class="illini">${name}</span>` : name; }
 
+  /* ---- Score & outcome helpers ---- */
+
+  function bothScoresPresent(a,b){
+    const x = parseInt(a,10), y = parseInt(b,10);
+    return Number.isFinite(x) && Number.isFinite(y);
+  }
+
+  // Returns string like " (86–72)" with higher score first; "" if no scores.
+  function sortedScoreString(a,b){
+    const x = parseInt(a,10), y = parseInt(b,10);
+    if(!(Number.isFinite(x)&&Number.isFinite(y))) return "";
+    const hi = Math.max(x,y), lo = Math.min(x,y);
+    return ` (${hi}–${lo})`;
+  }
+
+  // Determine win/loss for the row's team. Returns "win" | "loss" | null.
+  function outcomeForRow(isHome, homeScore, awayScore){
+    const hs = parseInt(homeScore,10), as = parseInt(awayScore,10);
+    if(!(Number.isFinite(hs)&&Number.isFinite(as))) return null;
+    const teamScore = isHome ? hs : as;
+    const oppScore  = isHome ? as : hs;
+    if(teamScore > oppScore) return "win";
+    if(teamScore < oppScore) return "loss";
+    return null; // tie/unknown
+  }
+
   function renderDayCell(team, day, schedIndex, apMap, ccMap, kpMap){
     const games = gamesOnDayFor(team, day, schedIndex);
     if(!games.length) return `<div class="muted tiny">—</div>`;
     return games.map(g=>{
       const tvPiece = g.tv ? ` <span class="tv">• ${g.tv}</span>` : "";
-      const score = (g.homeScore || g.awayScore) ? ` (${g.awayScore}–${g.homeScore})` : "";
+
+      const scoreStr = sortedScoreString(g.homeScore, g.awayScore); // higher first
       const atvs = g.isHome ? "vs" : "@";
       const oppName = hlIllini(g.opp);
       const oppRanks = rankInline(g.opp, apMap, ccMap, kpMap);
+
+      const outcome = outcomeForRow(g.isHome, g.homeScore, g.awayScore); // win/loss/null
+      const outcomeClass = outcome ? ` ${outcome}` : "";
+
       return `
-        <div class="game">
+        <div class="game${outcomeClass}">
           <div class="line">
             ${statusPill(g.status)}
             <span class="nowrap tiny">${formatTimeET(g.start)}</span>
           </div>
-          <div class="tiny">${atvs} <strong>${oppName}</strong>${oppRanks}${score}${tvPiece}</div>
+          <div class="tiny">${atvs} <strong>${oppName}</strong>${oppRanks}${scoreStr}${tvPiece}</div>
           <div class="tiny muted">— ${g.city || ""}${g.state?`, ${g.state}`:""}</div>
         </div>
       `;
