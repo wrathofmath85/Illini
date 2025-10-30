@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <title>College Hoops — Weekly Board</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <!-- Fonts & minimal styling -->
+  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 
@@ -13,10 +13,7 @@
       --bg:#0b1020; --card:#111735; --muted:#7e86a6; --text:#eaf0ff;
       --chip:#19214a; --border:#222b5a; --hdr:#0d1330;
       --good:#34d399; --warn:#fbbf24;
-
-      /* Illinois brand */
-      --illini-orange:#E84A27;
-      --illini-blue:#13294B;
+      --illini-orange:#E84A27; --illini-blue:#13294B;
     }
     *{box-sizing:border-box}
     body{margin:0;background:linear-gradient(180deg,#0b1020 0%, #0c163a 100%); color:var(--text); font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif}
@@ -24,12 +21,12 @@
     h1{font-size:28px;margin:0 0 6px 0;font-weight:800;letter-spacing:.2px}
     .sub{color:var(--muted); margin-bottom:18px}
 
-    /* Section cards */
+    /* Section cards (desktop baseline) */
     .section{background:var(--card); border:1px solid var(--border); border-radius:16px; padding:12px; margin-bottom:16px}
     .section h2{margin:0 0 4px 0; font-size:20px; font-weight:800}
     .meta{display:flex; align-items:center; gap:8px; color:var(--muted); font-size:12px; margin-bottom:10px}
 
-    /* Week table */
+    /* Table */
     .weekboard{width:100%; border-collapse:collapse; overflow:hidden; border-radius:12px}
     .weekboard thead th{background:var(--hdr); color:#cfe2ff; font-weight:700; font-size:12px; padding:10px; border-bottom:1px solid var(--border); text-align:left; white-space:nowrap}
     .weekboard tbody td, .weekboard tbody th{padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:top; font-size:13px}
@@ -38,7 +35,6 @@
     .chip{display:inline-block; background:var(--chip); border:1px solid #2a3472; color:#dbe5ff; padding:2px 8px; border-radius:999px; font-size:11px}
     .chip.good{border-color:#1f5e44; background:rgba(52,211,153,.12); color:#c9ffe8}
     .chip.warn{border-color:#6b4b12; background:rgba(251,191,36,.12); color:#ffe9b8}
-
     .apmeta{display:flex; gap:6px; flex-wrap:wrap; margin-top:6px}
     .apmeta .chip{border-color:#39418d}
 
@@ -52,13 +48,15 @@
     .nowrap{white-space:nowrap}
     .tv{word-break:keep-all}
 
-    /* Sticky team column on wide screens */
+    /* Horizontal scroll container (desktop baseline) */
+    .scroller{overflow-x:auto}
+
+    /* Sticky first column on wide screens */
     @media (min-width: 900px){
       .weekboard thead th.sticky, .weekboard tbody th.sticky{
         position:sticky; left:0; z-index:2; background:linear-gradient(90deg, var(--hdr) 0%, var(--hdr) 70%, rgba(13,19,48,0) 100%);
       }
       .weekboard tbody th.sticky{background:linear-gradient(90deg, var(--card) 0%, var(--card) 70%, rgba(17,23,53,0) 100%); z-index:1}
-      .scroller{overflow-x:auto}
     }
 
     .badge{font-size:11px; padding:2px 6px; border-radius:999px; background:#0d1330; border:1px solid #28306a; color:#cfe2ff}
@@ -67,20 +65,38 @@
     .illini{
       background:var(--illini-orange);
       color:var(--illini-blue);
-      padding:0 6px;
-      border-radius:6px;
-      font-weight:800;
+      padding:0 6px; border-radius:6px; font-weight:800;
     }
 
-    /* --------- MOBILE-ONLY ENHANCEMENTS (≤ 720px) --------- */
+    /* ========== MOBILE-ONLY ENHANCEMENTS (≤720px) ========== */
     .only-mobile{display:none}
+
+    /* New: mobile “scroll card” so the whole scroll area sits inside the blue box */
+    .cardbox{ /* desktop default: inert */
+      border-radius:16px;
+    }
 
     @media (max-width:720px){
       .wrap{padding:0 10px; margin:22px auto}
       h1{font-size:24px}
-      .section{padding:10px; border-radius:14px}
-      .section h2{font-size:18px}
-      .meta{font-size:11px}
+      .section{ /* move the visual card to the inner scroll area on mobile */
+        background:transparent; border:none; padding:0 0 14px; margin-bottom:18px;
+      }
+      .section h2{font-size:18px; padding:0 2px}
+      .meta{font-size:11px; padding:0 2px; margin-bottom:8px}
+
+      /* The new blue box that contains ALL columns */
+      .cardbox{
+        background:var(--card);
+        border:1px solid var(--border);
+        border-radius:16px;
+        padding:8px;
+        overflow:hidden;        /* clip rounded corners while scrolling */
+      }
+      .cardbox .scroller{
+        -webkit-overflow-scrolling:touch;
+        padding-bottom:2px;     /* breathing room for iOS scrollbars */
+      }
 
       .weekboard thead th{font-size:11px; padding:8px 8px}
       .weekboard tbody td, .weekboard tbody th{font-size:12px; padding:8px}
@@ -88,7 +104,7 @@
       .pill{font-size:9px}
       .tiny{font-size:10px}
 
-      /* Give each day column a sensible width for smooth horizontal scroll */
+      /* Day columns sized for smooth horizontal scroll */
       #apTable tbody td, #oocTable tbody td, #b1gTable tbody td{min-width:160px}
 
       /* Hide spacer column after team on AP & OOC */
@@ -109,10 +125,10 @@
         display:none;
       }
 
-      /* Show mobile-only chips under team name in Big Ten rows */
+      /* Show rank chips beneath team name in Big Ten on mobile */
       .only-mobile{display:block; margin-top:6px}
 
-      /* Make long network strings wrap more gracefully */
+      /* Wrap long TV strings */
       .tv{white-space:normal; word-break:break-word}
     }
   </style>
@@ -136,11 +152,13 @@
         <span class="badge" id="apCount">0 teams</span>
         <span class="muted tiny">AP / Coaches / KenPom + AP Points & First-place votes</span>
       </div>
-      <div class="scroller">
-        <table class="weekboard" id="apTable">
-          <thead></thead>
-          <tbody></tbody>
-        </table>
+      <div class="cardbox">
+        <div class="scroller">
+          <table class="weekboard" id="apTable">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+        </div>
       </div>
     </section>
 
@@ -151,11 +169,13 @@
         <span class="badge" id="oocCount">0 opponents</span>
         <span class="muted tiny">Opponents list from your spec</span>
       </div>
-      <div class="scroller">
-        <table class="weekboard" id="oocTable">
-          <thead></thead>
-          <tbody></tbody>
-        </table>
+      <div class="cardbox">
+        <div class="scroller">
+          <table class="weekboard" id="oocTable">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+        </div>
       </div>
     </section>
 
@@ -166,11 +186,13 @@
         <span class="badge" id="b1gCount">0 teams</span>
         <span class="muted tiny">Sorted by OverallPct (then wins)</span>
       </div>
-      <div class="scroller">
-        <table class="weekboard" id="b1gTable">
-          <thead></thead>
-          <tbody></tbody>
-        </table>
+      <div class="cardbox">
+        <div class="scroller">
+          <table class="weekboard" id="b1gTable">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+        </div>
       </div>
     </section>
 
@@ -181,11 +203,9 @@
 
   <script>
   // ========= CONFIG =========
-  // 1) Set your week here (any Monday in ET):
-  const WEEK_START = "2025-11-03"; // <-- change this; must be a Monday (ET)
+  const WEEK_START = "2025-11-03"; // Monday (ET)
   const TZ = "America/New_York";
 
-  // 2) Data sources
   const URLS = {
     ap: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSkcLAiNAH3ccrZEFjr8ONOP1ktnnVczk8IqZ1sZ65HcxxRwAQUD75cKz9eh4h7WiV6puPycS0o56FL/pub?gid=373873164&single=true&output=csv",
     coaches: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSkcLAiNAH3ccrZEFjr8ONOP1ktnnVczk8IqZ1sZ65HcxxRwAQUD75cKz9eh4h7WiV6puPycS0o56FL/pub?gid=477166523&single=true&output=csv",
@@ -194,13 +214,11 @@
     kenpom: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSpEizCaqirmqDs-G7DoI70aab-WxepYTQz1myBK79BPZQaznnx4PYW3AeTkm7lWPRUv8uLParc8PpZ/pub?gid=917670909&single=true&output=csv"
   };
 
-  // 3) Illinois OOC list
   const ILLINOIS_OOC = [
     "Jackson State Tigers","Florida Gulf Coast Eagles","Texas Tech Red Raiders","Colgate Raiders","Alabama Crimson Tide",
     "Long Island University Sharks","UT Rio Grande Valley Vaqueros","UConn Huskies","Tennessee Volunteers","Missouri Tigers","Southern Jaguars"
   ];
 
-  // 4) Name normalization + aliases
   const ALIASES = new Map([
     ["uconn","connecticut"],
     ["ut-rio grande valley","texas rio grande valley"],
@@ -209,6 +227,7 @@
     ["saint johns","st. john's"],
     ["jackson st","jackson state"]
   ]);
+
   function normalizeName(s){
     if(!s) return "";
     let t = String(s).trim().toLowerCase();
@@ -223,7 +242,6 @@
     return alias ? alias : t;
   }
 
-  // ===== Utilities =====
   function safeInt(x){ const n = parseInt(x,10); return Number.isFinite(n) ? n : null; }
 
   function fetchCSV(url){
@@ -238,22 +256,13 @@
 
   function mondayOf(dateStr){
     const d = dayjs.tz(dateStr, TZ).startOf('day');
-    const dow = d.day(); // 0=Sun
-    const off = (dow===0) ? -6 : (1 - dow);
+    const dow = d.day(); const off = (dow===0) ? -6 : (1 - dow);
     return d.add(off,'day');
   }
   function sundayOf(mon){ return mon.add(6,'day').endOf('day'); }
-
-  function weekDays(mon){
-    return Array.from({length:7}, (_,i)=> mon.add(i,'day'));
-  }
-
+  function weekDays(mon){ return Array.from({length:7}, (_,i)=> mon.add(i,'day')); }
   function formatDayHead(d){ return d.format("ddd M/D"); }
-  function formatTimeET(startET){
-    if(!startET) return "";
-    const d = dayjs.tz(startET, TZ);
-    return d.isValid() ? d.format("h:mm A") : String(startET);
-  }
+  function formatTimeET(startET){ if(!startET) return ""; const d = dayjs.tz(startET, TZ); return d.isValid()? d.format("h:mm A") : String(startET); }
 
   function statusPill(status){
     if(!status) return "";
@@ -263,30 +272,19 @@
     return `<span class="pill">${status}</span>`;
   }
 
-  // ---- TV extraction: robustly coalesce across common headers
+  // Robust TV extraction + Streaming
   function extractTVFromRow(r){
     const candidates = [
       r.TV, r.Tv, r.tv, r.Network, r.Television, r.Broadcast, r.Channel,
       r["Time/TV"], r["Time / TV"], r.TimeTV, r["Time Tv"], r["Time tv"]
     ];
     let tv = (candidates.find(v => v && String(v).trim()) || "").toString().trim();
-
-    // If the sheet separates streaming, include that too
     const streaming = (r.Streaming || r["Streams"] || r["Stream"] || "").toString().trim();
-
-    // Clean stray em dashes / placeholders
     const clean = s => s.replace(/^—+$/,"").replace(/^\s*-\s*$/,"").trim();
-
-    tv = clean(tv);
-    const streamClean = clean(streaming);
-
-    if(tv && streamClean){
-      return `${tv}, ${streamClean}`;
-    }else if(streamClean){
-      return streamClean;
-    }else{
-      return tv; // may be empty string
-    }
+    tv = clean(tv); const streamClean = clean(streaming);
+    if(tv && streamClean) return `${tv}, ${streamClean}`;
+    if(streamClean) return streamClean;
+    return tv;
   }
 
   function buildScheduleIndex(rows){
@@ -315,8 +313,7 @@
 
   function gamesOnDayFor(team, day, schedIndex){
     const k = normalizeName(team);
-    const start = day.startOf('day');
-    const end = day.endOf('day');
+    const start = day.startOf('day'); const end = day.endOf('day');
     const arr = schedIndex.get(k) || [];
     return arr.filter(g=>{
       const t = dayjs.tz(g.start, TZ);
@@ -335,7 +332,7 @@
   }
 
   function buildKenPomMap(rows){
-    const m = new Map(); // key: Team2 normalized -> rank
+    const m = new Map();
     rows.forEach(r=>{
       const k = normalizeName(r.Team2 || r.Team || "");
       const v = safeInt(r.Rank);
@@ -358,14 +355,12 @@
     `;
   }
 
-  // AP points + first place votes chips (AP section only)
   function apMetaChips(points, firstVotes){
     const pts = points ? `<span class="chip">Pts ${points}</span>` : "";
     const fp = firstVotes ? `<span class="chip">1st ${firstVotes}</span>` : "";
     return `<div class="apmeta">${pts}${fp}</div>`;
   }
 
-  // Compact inline ranks for opponent display
   function rankInline(teamName, apMap, ccMap, kpMap){
     const k = normalizeName(teamName);
     const ap = apMap.get(k); const cc = ccMap.get(k); const kp = kpMap.get(k);
@@ -376,15 +371,12 @@
     return parts.length ? ` <span class="tiny muted">(${parts.join(" • ")})</span>` : "";
   }
 
-  // Illinois highlight helpers
   function isIllini(name){
     const raw = (name||"").toLowerCase();
     const norm = normalizeName(name);
     return raw.includes("illinois fighting illini") || norm === "illinois";
   }
-  function hlIllini(name){
-    return isIllini(name) ? `<span class="illini">${name}</span>` : name;
-  }
+  function hlIllini(name){ return isIllini(name) ? `<span class="illini">${name}</span>` : name; }
 
   function renderDayCell(team, day, schedIndex, apMap, ccMap, kpMap){
     const games = gamesOnDayFor(team, day, schedIndex);
@@ -426,10 +418,10 @@
     const mon = mondayOf(WEEK_START);
     const sun = sundayOf(mon);
     const days = weekDays(mon);
-    document.getElementById("weekLabel").textContent = `Week of ${mon.format("dddd, MMM D, YYYY")} – ${sun.format("dddd, MMM D, YYYY")} (ET)`;
+    document.getElementById("weekLabel").textContent =
+      `Week of ${mon.format("dddd, MMM D, YYYY")} – ${sun.format("dddd, MMM D, YYYY")} (ET)`;
 
     try{
-      // Load all data
       const [kenpom, ap, coaches, standings, schedule] = await Promise.all([
         fetchCSV(URLS.kenpom),
         fetchCSV(URLS.ap),
@@ -438,21 +430,19 @@
         fetchCSV(URLS.schedule)
       ]);
 
-      // Indexes / maps
       const kpMap = buildKenPomMap(kenpom);
       const apMap = indexRanks(ap, "Team", "Rank");
       const ccMap = indexRanks(coaches, "Team", "Rank");
       const schedIndex = buildScheduleIndex(schedule);
 
-      // ===== AP Top N =====
+      // AP Top N
       const apTop = ap.filter(r=> safeInt(r.Rank));
       const apN = apTop.length;
       document.getElementById("apHeader").textContent = `AP Top ${apN} — Weekly Slate`;
       document.getElementById("apCount").textContent = `${apN} teams`;
 
       const apTable = document.getElementById("apTable");
-      renderWeekHeader(apTable, days, /*showRecordCols*/ false);
-
+      renderWeekHeader(apTable, days, false);
       const apTbody = apTable.querySelector("tbody");
       apTbody.innerHTML = apTop.map(r=>{
         const team = r.Team;
@@ -471,10 +461,10 @@
         `;
       }).join("");
 
-      // ===== Illinois OOC =====
+      // Illinois OOC
       document.getElementById("oocCount").textContent = `${ILLINOIS_OOC.length} opponents`;
       const oocTable = document.getElementById("oocTable");
-      renderWeekHeader(oocTable, days, /*showRecordCols*/ false);
+      renderWeekHeader(oocTable, days, false);
       const oocTbody = oocTable.querySelector("tbody");
       oocTbody.innerHTML = ILLINOIS_OOC.map(name=>{
         const nameDisplay = hlIllini(name);
@@ -489,7 +479,7 @@
         `;
       }).join("");
 
-      // ===== Big Ten =====
+      // Big Ten
       const bigTenRows = standings.filter(r=>{
         const c = String(r.Conference||"").toLowerCase();
         return c.includes("big ten") || c === "b10" || c.includes("big-ten");
@@ -505,7 +495,7 @@
       document.getElementById("b1gCount").textContent = `${bigTenRows.length} teams`;
 
       const b1gTable = document.getElementById("b1gTable");
-      renderWeekHeader(b1gTable, days, /*showRecordCols*/ true);
+      renderWeekHeader(b1gTable, days, true);
       const b1gBody = b1gTable.querySelector("tbody");
       b1gBody.innerHTML = bigTenRows.map(r=>{
         const team = r.Team;
