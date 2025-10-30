@@ -31,7 +31,7 @@
 
     /* Week table */
     .weekboard{width:100%; border-collapse:collapse; overflow:hidden; border-radius:12px}
-    .weekboard thead th{background:var(--hdr); color:#cfe2ff; font-weight:700; font-size:12px; padding:10px; border-bottom:1px solid var(--border); text-align:left}
+    .weekboard thead th{background:var(--hdr); color:#cfe2ff; font-weight:700; font-size:12px; padding:10px; border-bottom:1px solid var(--border); text-align:left; white-space:nowrap}
     .weekboard tbody td, .weekboard tbody th{padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:top; font-size:13px}
     .teamCol{white-space:nowrap}
     .rankchips{display:flex; gap:6px; flex-wrap:wrap; margin-top:4px}
@@ -50,6 +50,7 @@
     .muted{color:var(--muted)}
     .tiny{font-size:11px}
     .nowrap{white-space:nowrap}
+    .tv{word-break:keep-all}
 
     /* Sticky team column on wide screens */
     @media (min-width: 900px){
@@ -69,6 +70,50 @@
       padding:0 6px;
       border-radius:6px;
       font-weight:800;
+    }
+
+    /* --------- MOBILE-ONLY ENHANCEMENTS (≤ 720px) --------- */
+    .only-mobile{display:none}
+
+    @media (max-width:720px){
+      .wrap{padding:0 10px; margin:22px auto}
+      h1{font-size:24px}
+      .section{padding:10px; border-radius:14px}
+      .section h2{font-size:18px}
+      .meta{font-size:11px}
+
+      .weekboard thead th{font-size:11px; padding:8px 8px}
+      .weekboard tbody td, .weekboard tbody th{font-size:12px; padding:8px}
+      .game{gap:1px; margin-bottom:8px}
+      .pill{font-size:9px}
+      .tiny{font-size:10px}
+
+      /* Give each day column a sensible width for smooth horizontal scroll */
+      #apTable tbody td, #oocTable tbody td, #b1gTable tbody td{min-width:160px}
+
+      /* Hide spacer column after team on AP & OOC */
+      #apTable thead th:nth-child(2),
+      #apTable tbody td:nth-child(2),
+      #oocTable thead th:nth-child(2),
+      #oocTable tbody td:nth-child(2){
+        display:none;
+      }
+
+      /* In Big Ten, hide Overall, Conf and AP/KP columns to free space */
+      #b1gTable thead th:nth-child(2),
+      #b1gTable tbody td:nth-child(2),
+      #b1gTable thead th:nth-child(3),
+      #b1gTable tbody td:nth-child(3),
+      #b1gTable thead th:nth-child(4),
+      #b1gTable tbody td:nth-child(4){
+        display:none;
+      }
+
+      /* Show mobile-only chips under team name in Big Ten rows */
+      .only-mobile{display:block; margin-top:6px}
+
+      /* Make long network strings wrap more gracefully */
+      .tv{white-space:normal; word-break:break-word}
     }
   </style>
 
@@ -259,7 +304,7 @@
         status: r.Status,
         home: r.Home, away: r.Away,
         homeScore: r.HomeScore, awayScore: r.AwayScore,
-        tv: extractTVFromRow(r),  // <<<<<<<<<< ALWAYS FILLED WHEN AVAILABLE
+        tv: extractTVFromRow(r),
         venue: r.Venue, city: r.City, state: r.State
       };
       push(r.Home, {...g, isHome:true, opp:r.Away});
@@ -345,7 +390,7 @@
     const games = gamesOnDayFor(team, day, schedIndex);
     if(!games.length) return `<div class="muted tiny">—</div>`;
     return games.map(g=>{
-      const tvPiece = g.tv ? ` • ${g.tv}` : "";
+      const tvPiece = g.tv ? ` <span class="tv">• ${g.tv}</span>` : "";
       const score = (g.homeScore || g.awayScore) ? ` (${g.awayScore}–${g.homeScore})` : "";
       const atvs = g.isHome ? "vs" : "@";
       const oppName = hlIllini(g.opp);
@@ -471,7 +516,10 @@
         const confPct = (parseFloat(r.ConfPct)||0).toFixed(3);
         return `
           <tr>
-            <th class="sticky teamCol"><strong>${teamDisplay}</strong></th>
+            <th class="sticky teamCol">
+              <strong>${teamDisplay}</strong>
+              <div class="only-mobile">${chipsCell}</div>
+            </th>
             <td>${r.Overall || "—"} <span class="muted tiny">(${overallPct})</span></td>
             <td>${r.ConfWL || "—"} <span class="muted tiny">(${confPct})</span></td>
             <td>${chipsCell}</td>
