@@ -20,6 +20,10 @@
       --win-bd: #1f5e44;
       --loss-bg: rgba(239,68,68,.10);
       --loss-bd: #6b1f1f;
+
+      /* NEW: live-game tint (yellow) */
+      --live-bg: rgba(251,191,36,.16);
+      --live-bd: #7a4e0d;
     }
     *{box-sizing:border-box}
     body{margin:0;background:linear-gradient(180deg,#0b1020 0%, #0c163a 100%); color:var(--text); font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif}
@@ -47,6 +51,9 @@
     .game{display:flex; flex-direction:column; gap:2px; margin-bottom:6px; border:1px solid transparent; border-radius:10px; padding:6px}
     .game.win{background:var(--win-bg); border-color:var(--win-bd)}
     .game.loss{background:var(--loss-bg); border-color:var(--loss-bd)}
+    /* NEW: highlight live games */
+    .game.liveGame{background:var(--live-bg); border-color:var(--live-bd)}
+
     .line{display:flex; gap:6px; align-items:center; flex-wrap:wrap}
     .pill{padding:1px 6px; border-radius:6px; font-weight:700; font-size:10px; border:1px solid #2b356d; background:#0e1540}
     .final{color:#c4ffd8; border-color:#2a5e48; background:#0f2b24}
@@ -78,33 +85,23 @@
 
     /* ========== MOBILE-ONLY ENHANCEMENTS (≤720px) ========== */
     .only-mobile{display:none}
-
-    /* New: mobile “scroll card” so the whole scroll area sits inside the blue box */
-    .cardbox{ /* desktop default: inert */
-      border-radius:16px;
-    }
+    .cardbox{border-radius:16px;}
 
     @media (max-width:720px){
       .wrap{padding:0 10px; margin:22px auto}
       h1{font-size:24px}
-      .section{ /* move the visual card to the inner scroll area on mobile */
-        background:transparent; border:none; padding:0 0 14px; margin-bottom:18px;
-      }
+      .section{background:transparent; border:none; padding:0 0 14px; margin-bottom:18px;}
       .section h2{font-size:18px; padding:0 2px}
       .meta{font-size:11px; padding:0 2px; margin-bottom:8px}
 
-      /* The new blue box that contains ALL columns */
       .cardbox{
         background:var(--card);
         border:1px solid var(--border);
         border-radius:16px;
         padding:8px;
-        overflow:hidden;        /* clip rounded corners while scrolling */
+        overflow:hidden;
       }
-      .cardbox .scroller{
-        -webkit-overflow-scrolling:touch;
-        padding-bottom:2px;     /* breathing room for iOS scrollbars */
-      }
+      .cardbox .scroller{-webkit-overflow-scrolling:touch; padding-bottom:2px;}
 
       .weekboard thead th{font-size:11px; padding:8px 8px}
       .weekboard tbody td, .weekboard tbody th{font-size:12px; padding:8px}
@@ -112,31 +109,21 @@
       .pill{font-size:9px}
       .tiny{font-size:10px}
 
-      /* Day columns sized for smooth horizontal scroll */
       #apTable tbody td, #oocTable tbody td, #b1gTable tbody td{min-width:160px}
 
-      /* Hide spacer column after team on AP & OOC */
       #apTable thead th:nth-child(2),
       #apTable tbody td:nth-child(2),
       #oocTable thead th:nth-child(2),
-      #oocTable tbody td:nth-child(2){
-        display:none;
-      }
+      #oocTable tbody td:nth-child(2){display:none;}
 
-      /* In Big Ten, hide Overall, Conf and AP/KP columns to free space */
       #b1gTable thead th:nth-child(2),
       #b1gTable tbody td:nth-child(2),
       #b1gTable thead th:nth-child(3),
       #b1gTable tbody td:nth-child(3),
       #b1gTable thead th:nth-child(4),
-      #b1gTable tbody td:nth-child(4){
-        display:none;
-      }
+      #b1gTable tbody td:nth-child(4){display:none;}
 
-      /* Show rank chips beneath team name in Big Ten on mobile */
       .only-mobile{display:block; margin-top:6px}
-
-      /* Wrap long TV strings */
       .tv{white-space:normal; word-break:break-word}
     }
   </style>
@@ -217,6 +204,7 @@
   const URLS = {
     ap: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSkcLAiNAH3ccrZEFjr8ONOP1ktnnVczk8IqZ1sZ65HcxxRwAQUD75cKz9eh4h7WiV6puPycS0o56FL/pub?gid=373873164&single=true&output=csv",
     coaches: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSkcLAiNAH3ccrZEFjr8ONOP1ktnnVczk8IqZ1sZ65HcxxRwAQUD75cKz9eh4h7WiV6puPycS0o56FL/pub?gid=477166523&single=true&output=csv",
+    /* Your schedules CSV now includes: StatusName, StatusState, StatusCompleted, StatusDetail, Clock, Period, IsFinal, IsLive */
     schedule: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSsbB8QIfHsfefXzCc-eEDAw0T9Z2MPsAfnOp6BN33ZkPJBQ97RdHw7qs-v3MuGQaxfWUWmOCQtv2Mm/pub?gid=830783021&single=true&output=csv",
     standings: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRSuYr6k69OmX2LyxR_69Xhd_10nYOmH9W_rNDcfwefavlRbpdLV4GnD_lB0cZtAFexA_tRUki8FTnV/pub?gid=335851738&single=true&output=csv",
     kenpom: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSpEizCaqirmqDs-G7DoI70aab-WxepYTQz1myBK79BPZQaznnx4PYW3AeTkm7lWPRUv8uLParc8PpZ/pub?gid=917670909&single=true&output=csv"
@@ -251,6 +239,12 @@
   }
 
   function safeInt(x){ const n = parseInt(x,10); return Number.isFinite(n) ? n : null; }
+  function toBool(v){
+    if (typeof v === "boolean") return v;
+    if (v == null) return false;
+    const s = String(v).trim().toLowerCase();
+    return s === "true" || s === "1" || s === "yes";
+  }
 
   function fetchCSV(url){
     return new Promise((resolve,reject)=>{
@@ -272,12 +266,12 @@
   function formatDayHead(d){ return d.format("ddd M/D"); }
   function formatTimeET(startET){ if(!startET) return ""; const d = dayjs.tz(startET, TZ); return d.isValid()? d.format("h:mm A") : String(startET); }
 
-  function statusPill(status){
-    if(!status) return "";
-    const s = String(status).toLowerCase();
-    if(s.includes("final")) return `<span class="pill final">FINAL</span>`;
-    if(s.includes("live")) return `<span class="pill live">LIVE</span>`;
-    return `<span class="pill">${status}</span>`;
+  // Pill text using new CSV booleans
+  function statusPillFromGame(g){
+    if (g.isFinal) return `<span class="pill final">FINAL</span>`;
+    if (g.isLive)  return `<span class="pill live">LIVE${g.clock ? " " + g.clock : ""}</span>`;
+    const label = g.statusDetail || g.statusName || g.status || "";
+    return `<span class="pill">${label || "—"}</span>`;
   }
 
   // Robust TV extraction + Streaming
@@ -307,7 +301,16 @@
       const g = {
         id: r.GameId,
         start: r.StartET,
-        status: r.Status,
+        status: r.Status || r.StatusName || "",
+        statusName: r.StatusName || "",
+        statusDetail: r.StatusDetail || "",
+        statusState: r.StatusState || "",
+        statusCompleted: toBool(r.StatusCompleted),
+        clock: r.Clock || "",
+        period: safeInt(r.Period),
+        isFinal: toBool(r.IsFinal),
+        isLive: toBool(r.IsLive),
+
         home: r.Home, away: r.Away,
         homeScore: r.HomeScore, awayScore: r.AwayScore,
         tv: extractTVFromRow(r),
@@ -425,11 +428,12 @@
 
       const outcome = outcomeForRow(g.isHome, g.homeScore, g.awayScore); // win/loss/null
       const outcomeClass = outcome ? ` ${outcome}` : "";
+      const liveClass = g.isLive ? " liveGame" : "";  // NEW: yellow highlight when live
 
       return `
-        <div class="game${outcomeClass}">
+        <div class="game${outcomeClass}${liveClass}">
           <div class="line">
-            ${statusPill(g.status)}
+            ${statusPillFromGame(g)}
             <span class="nowrap tiny">${formatTimeET(g.start)}</span>
           </div>
           <div class="tiny">${atvs} <strong>${oppName}</strong>${oppRanks}${scoreStr}${tvPiece}</div>
