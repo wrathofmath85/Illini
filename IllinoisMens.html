@@ -21,7 +21,7 @@
       --loss-bg: rgba(239,68,68,.10);
       --loss-bd: #6b1f1f;
 
-      /* NEW: live-game tint (yellow) */
+      /* live-game tint (yellow) */
       --live-bg: rgba(251,191,36,.16);
       --live-bd: #7a4e0d;
     }
@@ -31,12 +31,10 @@
     h1{font-size:28px;margin:0 0 6px 0;font-weight:800;letter-spacing:.2px}
     .sub{color:var(--muted); margin-bottom:18px}
 
-    /* Section cards (desktop baseline) */
     .section{background:var(--card); border:1px solid var(--border); border-radius:16px; padding:12px; margin-bottom:16px}
     .section h2{margin:0 0 4px 0; font-size:20px; font-weight:800}
     .meta{display:flex; align-items:center; gap:8px; color:var(--muted); font-size:12px; margin-bottom:10px}
 
-    /* Table */
     .weekboard{width:100%; border-collapse:collapse; overflow:hidden; border-radius:12px}
     .weekboard thead th{background:var(--hdr); color:#cfe2ff; font-weight:700; font-size:12px; padding:10px; border-bottom:1px solid var(--border); text-align:left; white-space:nowrap}
     .weekboard tbody td, .weekboard tbody th{padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:top; font-size:13px}
@@ -51,7 +49,6 @@
     .game{display:flex; flex-direction:column; gap:2px; margin-bottom:6px; border:1px solid transparent; border-radius:10px; padding:6px}
     .game.win{background:var(--win-bg); border-color:var(--win-bd)}
     .game.loss{background:var(--loss-bg); border-color:var(--loss-bd)}
-    /* NEW: highlight live games */
     .game.liveGame{background:var(--live-bg); border-color:var(--live-bd)}
 
     .line{display:flex; gap:6px; align-items:center; flex-wrap:wrap}
@@ -63,10 +60,8 @@
     .nowrap{white-space:nowrap}
     .tv{word-break:keep-all}
 
-    /* Horizontal scroll container (desktop baseline) */
     .scroller{overflow-x:auto}
 
-    /* Sticky first column on wide screens */
     @media (min-width: 900px){
       .weekboard thead th.sticky, .weekboard tbody th.sticky{
         position:sticky; left:0; z-index:2; background:linear-gradient(90deg, var(--hdr) 0%, var(--hdr) 70%, rgba(13,19,48,0) 100%);
@@ -76,14 +71,12 @@
 
     .badge{font-size:11px; padding:2px 6px; border-radius:999px; background:#0d1330; border:1px solid #28306a; color:#cfe2ff}
 
-    /* Illinois highlight */
     .illini{
       background:var(--illini-orange);
       color:var(--illini-blue);
       padding:0 6px; border-radius:6px; font-weight:800;
     }
 
-    /* ========== MOBILE-ONLY ENHANCEMENTS (≤720px) ========== */
     .only-mobile{display:none}
     .cardbox{border-radius:16px;}
 
@@ -204,7 +197,7 @@
   const URLS = {
     ap: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSkcLAiNAH3ccrZEFjr8ONOP1ktnnVczk8IqZ1sZ65HcxxRwAQUD75cKz9eh4h7WiV6puPycS0o56FL/pub?gid=373873164&single=true&output=csv",
     coaches: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSkcLAiNAH3ccrZEFjr8ONOP1ktnnVczk8IqZ1sZ65HcxxRwAQUD75cKz9eh4h7WiV6puPycS0o56FL/pub?gid=477166523&single=true&output=csv",
-    /* Your schedules CSV now includes: StatusName, StatusState, StatusCompleted, StatusDetail, Clock, Period, IsFinal, IsLive */
+    /* schedules CSV includes: StatusName, StatusState, StatusCompleted, StatusDetail, Clock, Period, IsFinal, IsLive */
     schedule: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSsbB8QIfHsfefXzCc-eEDAw0T9Z2MPsAfnOp6BN33ZkPJBQ97RdHw7qs-v3MuGQaxfWUWmOCQtv2Mm/pub?gid=830783021&single=true&output=csv",
     standings: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRSuYr6k69OmX2LyxR_69Xhd_10nYOmH9W_rNDcfwefavlRbpdLV4GnD_lB0cZtAFexA_tRUki8FTnV/pub?gid=335851738&single=true&output=csv",
     kenpom: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSpEizCaqirmqDs-G7DoI70aab-WxepYTQz1myBK79BPZQaznnx4PYW3AeTkm7lWPRUv8uLParc8PpZ/pub?gid=917670909&single=true&output=csv"
@@ -266,7 +259,7 @@
   function formatDayHead(d){ return d.format("ddd M/D"); }
   function formatTimeET(startET){ if(!startET) return ""; const d = dayjs.tz(startET, TZ); return d.isValid()? d.format("h:mm A") : String(startET); }
 
-  // Pill text using new CSV booleans
+  // Prefer CSV booleans; show clock on LIVE
   function statusPillFromGame(g){
     if (g.isFinal) return `<span class="pill final">FINAL</span>`;
     if (g.isLive)  return `<span class="pill live">LIVE${g.clock ? " " + g.clock : ""}</span>`;
@@ -274,7 +267,7 @@
     return `<span class="pill">${label || "—"}</span>`;
   }
 
-  // Robust TV extraction + Streaming
+  // TV / streaming gather
   function extractTVFromRow(r){
     const candidates = [
       r.TV, r.Tv, r.tv, r.Network, r.Television, r.Broadcast, r.Channel,
@@ -391,16 +384,13 @@
 
   /* ---- Score & outcome helpers ---- */
 
-  function bothScoresPresent(a,b){
-    const x = parseInt(a,10), y = parseInt(b,10);
-    return Number.isFinite(x) && Number.isFinite(y);
-  }
-
-  // Returns string like " (86–72)" with higher score first; "" if no scores.
-  function sortedScoreString(a,b){
-    const x = parseInt(a,10), y = parseInt(b,10);
-    if(!(Number.isFinite(x)&&Number.isFinite(y))) return "";
-    const hi = Math.max(x,y), lo = Math.min(x,y);
+  // Show score if both numbers exist.
+  // Suppress "0–0" for future games, but ALWAYS show for live/final.
+  function scoreStringForGame(g){
+    const hs = parseInt(g.homeScore,10), as = parseInt(g.awayScore,10);
+    if(!(Number.isFinite(hs) && Number.isFinite(as))) return "";
+    if(hs===0 && as===0 && !g.isLive && !g.isFinal) return "";
+    const hi = Math.max(hs,as), lo = Math.min(hs,as);
     return ` (${hi}–${lo})`;
   }
 
@@ -421,14 +411,14 @@
     return games.map(g=>{
       const tvPiece = g.tv ? ` <span class="tv">• ${g.tv}</span>` : "";
 
-      const scoreStr = sortedScoreString(g.homeScore, g.awayScore); // higher first
+      const scoreStr = scoreStringForGame(g);       // includes LIVE/FNAL logic
       const atvs = g.isHome ? "vs" : "@";
       const oppName = hlIllini(g.opp);
       const oppRanks = rankInline(g.opp, apMap, ccMap, kpMap);
 
       const outcome = outcomeForRow(g.isHome, g.homeScore, g.awayScore); // win/loss/null
       const outcomeClass = outcome ? ` ${outcome}` : "";
-      const liveClass = g.isLive ? " liveGame" : "";  // NEW: yellow highlight when live
+      const liveClass = g.isLive ? " liveGame" : "";  // yellow highlight when live
 
       return `
         <div class="game${outcomeClass}${liveClass}">
