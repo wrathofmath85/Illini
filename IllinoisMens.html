@@ -24,6 +24,10 @@
       /* live-game tint (yellow) */
       --live-bg: rgba(251,191,36,.16);
       --live-bd: #7a4e0d;
+
+      /* ranked vs ranked (bright blue) */
+      --ranked-bg: rgba(59,130,246,.20);
+      --ranked-bd: #3b82f6;
     }
     *{box-sizing:border-box}
     body{margin:0;background:linear-gradient(180deg,#0b1020 0%, #0c163a 100%); color:var(--text); font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif}
@@ -39,17 +43,19 @@
     .weekboard thead th{background:var(--hdr); color:#cfe2ff; font-weight:700; font-size:12px; padding:10px; border-bottom:1px solid var(--border); text-align:left; white-space:nowrap}
     .weekboard tbody td, .weekboard tbody th{padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:top; font-size:13px}
     .teamCol{white-space:nowrap}
-    .rankchips{display:flex; gap:6px; flex-wrap:wrap; margin-top:4px}
+
     .chip{display:inline-block; background:var(--chip); border:1px solid #2a3472; color:#dbe5ff; padding:2px 8px; border-radius:999px; font-size:11px}
     .chip.good{border-color:#1f5e44; background:rgba(52,211,153,.12); color:#c9ffe8}
     .chip.warn{border-color:#6b4b12; background:rgba(251,191,36,.12); color:#ffe9b8}
-    .apmeta{display:flex; gap:6px; flex-wrap:wrap; margin-top:6px}
-    .apmeta .chip{border-color:#39418d}
+
+    .ranklines{margin-top:4px; display:flex; flex-direction:column; gap:2px}
+    .rankline{display:flex; flex-wrap:wrap; gap:4px}
 
     .game{display:flex; flex-direction:column; gap:2px; margin-bottom:6px; border:1px solid transparent; border-radius:10px; padding:6px}
     .game.win{background:var(--win-bg); border-color:var(--win-bd)}
     .game.loss{background:var(--loss-bg); border-color:var(--loss-bd)}
     .game.liveGame{background:var(--live-bg); border-color:var(--live-bd)}
+    .game.rankedGame{background:var(--ranked-bg); border-color:var(--ranked-bd)}
 
     .line{display:flex; gap:6px; align-items:center; flex-wrap:wrap}
     .pill{padding:1px 6px; border-radius:6px; font-weight:700; font-size:10px; border:1px solid #2b356d; background:#0e1540}
@@ -138,7 +144,7 @@
       <h2 id="apHeader">AP Top — Weekly Slate</h2>
       <div class="meta">
         <span class="badge" id="apCount">0 teams</span>
-        <span class="muted tiny">AP / Coaches / KenPom + AP Points & First-place votes</span>
+        <span class="muted tiny">AP / Coaches / KenPom + AP & Coaches points / 1st-place votes</span>
       </div>
       <div class="cardbox">
         <div class="scroller">
@@ -335,12 +341,30 @@
     return m;
   }
 
+  function indexPollRows(rows){
+    const m = new Map();
+    rows.forEach(r=>{
+      const k = normalizeName(r.Team || r.team || "");
+      if(k) m.set(k, r);
+    });
+    return m;
+  }
+
   function buildKenPomMap(rows){
     const m = new Map();
     rows.forEach(r=>{
       const k = normalizeName(r.Team2 || r.Team || "");
       const v = safeInt(r.Rank);
       if(k && v != null) m.set(k, v);
+    });
+    return m;
+  }
+
+  function buildRecordMap(rows){
+    const m = new Map();
+    rows.forEach(r=>{
+      const k = normalizeName(r.Team || r.team || "");
+      if(k) m.set(k, r.Overall || r.OverallWL || r["Overall W-L"] || "");
     });
     return m;
   }
@@ -359,12 +383,6 @@
     `;
   }
 
-  function apMetaChips(points, firstVotes){
-    const pts = points ? `<span class="chip">Pts ${points}</span>` : "";
-    const fp = firstVotes ? `<span class="chip">1st ${firstVotes}</span>` : "";
-    return `<div class="apmeta">${pts}${fp}</div>`;
-  }
-
   function rankInline(teamName, apMap, ccMap, kpMap){
     const k = normalizeName(teamName);
     const ap = apMap.get(k); const cc = ccMap.get(k); const kp = kpMap.get(k);
@@ -381,6 +399,11 @@
     return raw.includes("illinois fighting illini") || norm === "illinois";
   }
   function hlIllini(name){ return isIllini(name) ? `<span class="illini">${name}</span>` : name; }
+
+  function isRankedAP(name, apMap){
+    const k = normalizeName(name);
+    return apMap.has(k);
+  }
 
   /* ---- Score & outcome helpers ---- */
 
@@ -411,21 +434,32 @@
     return games.map(g=>{
       const tvPiece = g.tv ? ` <span class="tv">• ${g.tv}</span>` : "";
 
-      const scoreStr = scoreStringForGame(g);       // includes LIVE/FNAL logic
+      const scoreStr = scoreStringForGame(g);
       const atvs = g.isHome ? "vs" : "@";
       const oppName = hlIllini(g.opp);
       const oppRanks = rankInline(g.opp, apMap, ccMap, kpMap);
 
-      const outcome = outcomeForRow(g.isHome, g.homeScore, g.awayScore); // win/loss/null
+      const outcome = outcomeForRow(g.isHome, g.homeScore, g.awayScore);
       const outcomeClass = outcome ? ` ${outcome}` : "";
-      const liveClass = g.isLive ? " liveGame" : "";  // yellow highlight when live
+      const liveClass = g.isLive ? " liveGame" : "";
+
+      // bright blue highlight for future games between two AP-ranked teams
+      const rankedClass =
+        (!g.isFinal && !g.isLive && isRankedAP(team, apMap) && isRankedAP(g.opp, apMap))
+          ? " rankedGame"
+          : "";
+
+      const showTopLine = g.isFinal || g.isLive; // hide status/time for future games
+      const topLine = showTopLine
+        ? `<div class="line">
+             ${statusPillFromGame(g)}
+             <span class="nowrap tiny">${formatTimeET(g.start)}</span>
+           </div>`
+        : "";
 
       return `
-        <div class="game${outcomeClass}${liveClass}">
-          <div class="line">
-            ${statusPillFromGame(g)}
-            <span class="nowrap tiny">${formatTimeET(g.start)}</span>
-          </div>
+        <div class="game${outcomeClass}${liveClass}${rankedClass}">
+          ${topLine}
           <div class="tiny">${atvs} <strong>${oppName}</strong>${oppRanks}${scoreStr}${tvPiece}</div>
           <div class="tiny muted">— ${g.city || ""}${g.state?`, ${g.state}`:""}</div>
         </div>
@@ -436,16 +470,62 @@
   function renderWeekHeader(tableEl, days, showRecordCols=false){
     const thead = tableEl.querySelector("thead");
     const dayHeads = days.map(d=> `<th>${formatDayHead(d)}</th>`).join("");
+    const midCols = showRecordCols
+      ? `<th>Overall</th><th>Conf</th><th>AP / Coaches / KP</th>`
+      : "";
     thead.innerHTML = `
       <tr>
         <th class="sticky teamCol">Team</th>
-        ${showRecordCols ? `<th>Overall</th><th>Conf</th><th>AP / Coaches / KP</th>` : `<th>AP / Coaches / KP</th>`}
+        ${midCols}
         ${dayHeads}
       </tr>
     `;
   }
 
   function parseWL(s){ const m = String(s||"").match(/(\d+)\D+(\d+)/); return m ? {w:+m[1], l:+m[2]} : {w:0,l:0}; }
+
+  function teamInfoBlock(teamName, apRowMap, ccRowMap, kpMap, recordMap, explicitRank){
+    const k = normalizeName(teamName);
+    const apRow = apRowMap.get(k) || {};
+    const ccRow = ccRowMap.get(k) || {};
+    const kp = kpMap.get(k);
+    const record = recordMap.get(k) || "";
+
+    const apRank = apRow.Rank || apRow.rank || "";
+    const apPts  = apRow.Points || apRow.Pts || "";
+    const apFirst = apRow.FirstPlaceVotes || apRow["1stPlaceVotes"] || apRow["First Place Votes"] || "";
+
+    const ccRank = ccRow.Rank || ccRow.rank || "";
+    const ccPts  = ccRow.Points || ccRow.Pts || "";
+    const ccFirst = ccRow.FirstPlaceVotes || ccRow["1stPlaceVotes"] || ccRow["First Place Votes"] || "";
+
+    const displayName = hlIllini(teamName);
+    const headlineRank = explicitRank || apRank;
+
+    return `
+      <div>
+        <strong>${headlineRank ? `#${headlineRank} ` : ""}${displayName}</strong>
+        <div class="ranklines">
+          <div class="rankline">
+            <span class="chip">${apRank ? `AP #${apRank}` : "AP —"}</span>
+            ${apPts ? `<span class="chip">Pts ${apPts}</span>` : ""}
+            ${apFirst ? `<span class="chip">(${apFirst})</span>` : ""}
+          </div>
+          <div class="rankline">
+            <span class="chip">${ccRank ? `Coaches #${ccRank}` : "Coaches —"}</span>
+            ${ccPts ? `<span class="chip">Pts ${ccPts}</span>` : ""}
+            ${ccFirst ? `<span class="chip">(${ccFirst})</span>` : ""}
+          </div>
+          <div class="rankline">
+            <span class="chip ${kp && kp<=25 ? "good" : ""}">${kp ? `KP #${kp}` : "KP —"}</span>
+          </div>
+          <div class="rankline">
+            <span class="chip">${record || "Record —"}</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
 
   (async function(){
     const mon = mondayOf(WEEK_START);
@@ -464,8 +544,11 @@
       ]);
 
       const kpMap = buildKenPomMap(kenpom);
+      const apRowMap = indexPollRows(ap);
+      const ccRowMap = indexPollRows(coaches);
       const apMap = indexRanks(ap, "Team", "Rank");
       const ccMap = indexRanks(coaches, "Team", "Rank");
+      const recordMap = buildRecordMap(standings);
       const schedIndex = buildScheduleIndex(schedule);
 
       // AP Top N
@@ -479,16 +562,13 @@
       const apTbody = apTable.querySelector("tbody");
       apTbody.innerHTML = apTop.map(r=>{
         const team = r.Team;
-        const teamDisplay = hlIllini(team);
-        const chips = rankChips(team, apMap, ccMap, kpMap);
-        const apMeta = apMetaChips(r.Points, r.FirstPlaceVotes);
+        const infoBlock = teamInfoBlock(team, apRowMap, ccRowMap, kpMap, recordMap, r.Rank);
         const dayCells = days.map(d=> `<td>${renderDayCell(team, d, schedIndex, apMap, ccMap, kpMap)}</td>`).join("");
         return `
           <tr>
             <th class="sticky teamCol">
-              <div><strong>${r.Rank ? `#${r.Rank} `:""}${teamDisplay}</strong>${chips}${apMeta}</div>
+              ${infoBlock}
             </th>
-            <td></td>
             ${dayCells}
           </tr>
         `;
@@ -500,13 +580,11 @@
       renderWeekHeader(oocTable, days, false);
       const oocTbody = oocTable.querySelector("tbody");
       oocTbody.innerHTML = ILLINOIS_OOC.map(name=>{
-        const nameDisplay = hlIllini(name);
-        const chips = rankChips(name, apMap, ccMap, kpMap);
+        const infoBlock = teamInfoBlock(name, apRowMap, ccRowMap, kpMap, recordMap, null);
         const dayCells = days.map(d=> `<td>${renderDayCell(name, d, schedIndex, apMap, ccMap, kpMap)}</td>`).join("");
         return `
           <tr>
-            <th class="sticky teamCol"><div><strong>${nameDisplay}</strong>${chips}</div></th>
-            <td></td>
+            <th class="sticky teamCol">${infoBlock}</th>
             ${dayCells}
           </tr>
         `;
