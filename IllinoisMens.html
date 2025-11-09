@@ -132,7 +132,10 @@
   <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/utc.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/timezone.js"></script>
-  <script>dayjs.extend(dayjs_plugin_utc); dayjs.extend(dayjs_plugin_timezone);</script>
+  <script>
+    dayjs.extend(dayjs_plugin_utc);
+    dayjs.extend(dayjs_plugin_timezone);
+  </script>
 </head>
 <body>
   <div class="wrap">
@@ -263,7 +266,11 @@
   function sundayOf(mon){ return mon.add(6,'day').endOf('day'); }
   function weekDays(mon){ return Array.from({length:7}, (_,i)=> mon.add(i,'day')); }
   function formatDayHead(d){ return d.format("ddd M/D"); }
-  function formatTimeET(startET){ if(!startET) return ""; const d = dayjs.tz(startET, TZ); return d.isValid()? d.format("h:mm A") : String(startET); }
+  function formatTimeET(startET){
+    if(!startET) return "";
+    const d = dayjs.tz(startET, TZ);
+    return d.isValid()? d.format("h:mm A") : String(startET);
+  }
 
   // TV / streaming gather
   function extractTVFromRow(r){
@@ -273,9 +280,9 @@
     ];
     let tv = (candidates.find(v => v && String(v).trim()) || "").toString().trim();
     const streaming = (r.Streaming || r["Streams"] || r["Stream"] || "").toString().trim();
-    const clean = s => s.replace(/^—+$/,"").replace(/^\s*-\s*$/,"").trim();
+    const clean = function(s){ return s.replace(/^—+$/,"").replace(/^\s*-\s*$/,"").trim(); };
     tv = clean(tv); const streamClean = clean(streaming);
-    if(tv && streamClean) return `${tv}, ${streamClean}`;
+    if(tv && streamClean) return tv + ", " + streamClean;
     if(streamClean) return streamClean;
     return tv;
   }
@@ -288,7 +295,7 @@
       if(!byTeam.has(k)) byTeam.set(k, []);
       byTeam.get(k).push(game);
     }
-    rows.forEach(r=>{
+    rows.forEach(function(r){
       const g = {
         id: r.GameId,
         start: r.StartET,
@@ -307,8 +314,8 @@
         tv: extractTVFromRow(r),
         venue: r.Venue, city: r.City, state: r.State
       };
-      push(r.Home, {...g, isHome:true, opp:r.Away});
-      push(r.Away, {...g, isHome:false, opp:r.Home});
+      push(r.Home, Object.assign({}, g, {isHome:true, opp:r.Away}));
+      push(r.Away, Object.assign({}, g, {isHome:false, opp:r.Home}));
     });
     return byTeam;
   }
@@ -317,15 +324,17 @@
     const k = normalizeName(team);
     const start = day.startOf('day'); const end = day.endOf('day');
     const arr = schedIndex.get(k) || [];
-    return arr.filter(g=>{
+    return arr.filter(function(g){
       const t = dayjs.tz(g.start, TZ);
       return t.isAfter(start.subtract(1,'ms')) && t.isBefore(end.add(1,'ms'));
-    }).sort((a,b)=> dayjs.tz(a.start,TZ)-dayjs.tz(b.start,TZ));
+    }).sort(function(a,b){ return dayjs.tz(a.start,TZ)-dayjs.tz(b.start,TZ); });
   }
 
-  function indexRanks(rows, keyField="Team", valueField="Rank"){
+  function indexRanks(rows, keyField, valueField){
+    keyField = keyField || "Team";
+    valueField = valueField || "Rank";
     const m = new Map();
-    rows.forEach(r=>{
+    rows.forEach(function(r){
       const k = normalizeName(r[keyField]);
       const v = safeInt(r[valueField]);
       if(k && v != null) m.set(k, v);
@@ -335,7 +344,7 @@
 
   function indexPollRows(rows){
     const m = new Map();
-    rows.forEach(r=>{
+    rows.forEach(function(r){
       const k = normalizeName(r.Team || r.team || "");
       if(k) m.set(k, r);
     });
@@ -344,7 +353,7 @@
 
   function buildKenPomMap(rows){
     const m = new Map();
-    rows.forEach(r=>{
+    rows.forEach(function(r){
       const k = normalizeName(r.Team2 || r.Team || "");
       const v = safeInt(r.Rank);
       if(k && v != null) m.set(k, v);
@@ -354,7 +363,7 @@
 
   function buildRecordMap(rows){
     const m = new Map();
-    rows.forEach(r=>{
+    rows.forEach(function(r){
       const k = normalizeName(r.Team || r.team || "");
       if(k) m.set(k, r.Overall || r.OverallWL || r["Overall W-L"] || "");
     });
@@ -363,34 +372,38 @@
 
   function rankChips(teamName, apMap, ccMap, kpMap){
     const k = normalizeName(teamName);
-    const ap = apMap.get(k) ?? null;
-    const cc = ccMap.get(k) ?? null;
-    const kp = kpMap.get(k) ?? null;
-    return `
-      <div class="rankchips">
-        <span class="chip">${ap?`AP #${ap}`:"AP —"}</span>
-        <span class="chip">${cc?`Coaches #${cc}`:"Coaches —"}</span>
-        <span class="chip ${kp && kp<=25?'good':''}">${kp?`KP #${kp}`:"KP —"}</span>
-      </div>
-    `;
+    const ap = apMap.has(k) ? apMap.get(k) : null;
+    const cc = ccMap.has(k) ? ccMap.get(k) : null;
+    const kp = kpMap.has(k) ? kpMap.get(k) : null;
+    return [
+      '<div class="rankchips">',
+        '<span class="chip">', (ap ? 'AP #' + ap : 'AP —') ,'</span>',
+        '<span class="chip">', (cc ? 'Coaches #' + cc : 'Coaches —') ,'</span>',
+        '<span class="chip ' ,(kp && kp<=25 ? 'good' : '') ,'">', (kp ? 'KP #' + kp : 'KP —'), '</span>',
+      '</div>'
+    ].join("");
   }
 
   function rankInline(teamName, apMap, ccMap, kpMap){
     const k = normalizeName(teamName);
     const ap = apMap.get(k); const cc = ccMap.get(k); const kp = kpMap.get(k);
     const parts = [];
-    if (ap != null) parts.push(`AP #${ap}`);
-    if (cc != null) parts.push(`C #${cc}`);
-    if (kp != null) parts.push(`KP #${kp}`);
-    return parts.length ? ` <span class="tiny muted">(${parts.join(" • ")})</span>` : "";
+    if (ap != null) parts.push('AP #' + ap);
+    if (cc != null) parts.push('C #' + cc);
+    if (kp != null) parts.push('KP #' + kp);
+    return parts.length ? ' <span class="tiny muted">(' + parts.join(' • ') + ')</span>' : "";
   }
 
   function isIllini(name){
     const raw = (name||"").toLowerCase();
     const norm = normalizeName(name);
-    return raw.includes("illinois fighting illini") || norm === "illinois";
+    return raw.indexOf("illinois fighting illini") !== -1 || norm === "illinois";
   }
-  function hlIllini(name){ return isIllini(name) ? `<span class="illini">${name}</span>` : name; }
+  function hlIllini(name){
+    return isIllini(name)
+      ? '<span class="illini">' + name + '</span>'
+      : name;
+  }
 
   function isRankedAP(name, apMap){
     const k = normalizeName(name);
@@ -402,11 +415,11 @@
   // Show score if numbers exist.
   // Suppress "0–0" ONLY for future games with no score; always show for live/final.
   function scoreStringForGame(g){
-    let hs = parseInt(g.homeScore,10);
-    let as = parseInt(g.awayScore,10);
+    var hs = parseInt(g.homeScore,10);
+    var as = parseInt(g.awayScore,10);
 
-    const hsValid = Number.isFinite(hs);
-    const asValid = Number.isFinite(as);
+    var hsValid = Number.isFinite(hs);
+    var asValid = Number.isFinite(as);
 
     // truly no score data at all
     if(!hsValid && !asValid) return "";
@@ -417,16 +430,16 @@
 
     if(hs===0 && as===0 && !g.isLive && !g.isFinal) return "";
 
-    const hi = Math.max(hs,as), lo = Math.min(hs,as);
-    return ` (${hi}–${lo})`;
+    var hi = Math.max(hs,as), lo = Math.min(hs,as);
+    return " (" + hi + "–" + lo + ")";
   }
 
   // Determine win/loss for the row's team. Returns "win" | "loss" | null.
   function outcomeForRow(isHome, homeScore, awayScore){
-    const hs = parseInt(homeScore,10), as = parseInt(awayScore,10);
+    var hs = parseInt(homeScore,10), as = parseInt(awayScore,10);
     if(!(Number.isFinite(hs)&&Number.isFinite(as))) return null;
-    const teamScore = isHome ? hs : as;
-    const oppScore  = isHome ? as : hs;
+    var teamScore = isHome ? hs : as;
+    var oppScore  = isHome ? as : hs;
     if(teamScore > oppScore) return "win";
     if(teamScore < oppScore) return "loss";
     return null; // tie/unknown
@@ -434,9 +447,10 @@
 
   function renderDayCell(team, day, schedIndex, apMap, ccMap, kpMap){
     const games = gamesOnDayFor(team, day, schedIndex);
-    if(!games.length) return `<div class="muted tiny">—</div>`;
-    return games.map(g=>{
-      const tvPiece = g.tv ? ` <span class="tv">• ${g.tv}</span>` : "";
+    if(!games.length) return '<div class="muted tiny">—</div>';
+    return games.map(function(g){
+      const tvPiece = g.tv ? ' <span class="tv">• ' + g.tv + '</span>' : "";
+
       const scoreStr = scoreStringForGame(g);
       const atvs = g.isHome ? "vs" : "@";
       const oppName = hlIllini(g.opp);
@@ -444,7 +458,7 @@
       const timeStr = formatTimeET(g.start);
 
       const outcome = outcomeForRow(g.isHome, g.homeScore, g.awayScore);
-      const outcomeClass = outcome ? ` ${outcome}` : "";
+      const outcomeClass = outcome ? ' ' + outcome : "";
       const liveClass = g.isLive ? " liveGame" : "";
 
       // bright blue highlight for future games between two AP-ranked teams
@@ -453,33 +467,41 @@
           ? " rankedGame"
           : "";
 
-      return `
-        <div class="game${outcomeClass}${liveClass}${rankedClass}">
-          <div class="tiny">
-            ${timeStr ? `${timeStr} · ` : ""}${atvs} <strong>${oppName}</strong>${oppRanks}${scoreStr}${tvPiece}
-          </div>
-          <div class="tiny muted">— ${g.city || ""}${g.state?`, ${g.state}`:""}</div>
-        </div>
-      `;
+      return [
+        '<div class="game', outcomeClass, liveClass, rankedClass, '">',
+          '<div class="tiny">',
+            (timeStr ? timeStr + ' · ' : ''),
+            atvs, ' <strong>', oppName, '</strong>',
+            oppRanks,
+            scoreStr,
+            tvPiece,
+          '</div>',
+          '<div class="tiny muted">— ', (g.city || ""), (g.state ? ', ' + g.state : ''), '</div>',
+        '</div>'
+      ].join("");
     }).join("");
   }
 
-  function renderWeekHeader(tableEl, days, showRecordCols=false){
+  function renderWeekHeader(tableEl, days, showRecordCols){
+    showRecordCols = !!showRecordCols;
     const thead = tableEl.querySelector("thead");
-    const dayHeads = days.map(d=> `<th>${formatDayHead(d)}</th>`).join("");
+    const dayHeads = days.map(function(d){ return '<th>' + formatDayHead(d) + '</th>'; }).join("");
     const midCols = showRecordCols
-      ? `<th>Overall</th><th>Conf</th><th>AP / Coaches / KP</th>`
+      ? '<th>Overall</th><th>Conf</th><th>AP / Coaches / KP</th>'
       : "";
-    thead.innerHTML = `
-      <tr>
-        <th class="sticky teamCol">Team</th>
-        ${midCols}
-        ${dayHeads}
-      </tr>
-    `;
+    thead.innerHTML = [
+      '<tr>',
+        '<th class="sticky teamCol">Team</th>',
+        midCols,
+        dayHeads,
+      '</tr>'
+    ].join("");
   }
 
-  function parseWL(s){ const m = String(s||"").match(/(\d+)\D+(\d+)/); return m ? {w:+m[1], l:+m[2]} : {w:0,l:0}; }
+  function parseWL(s){
+    const m = String(s||"").match(/(\d+)\D+(\d+)/);
+    return m ? {w:+m[1], l:+m[2]} : {w:0,l:0};
+  }
 
   function teamInfoBlock(teamName, apRowMap, ccRowMap, kpMap, recordMap, explicitRank){
     const k = normalizeName(teamName);
@@ -490,4 +512,148 @@
 
     const apRank = apRow.Rank || apRow.rank || "";
     const apPts  = apRow.Points || apRow.Pts || "";
-    const apFirst = apRow.FirstPlaceVotes || apRow["1stPlac]()
+    const apFirst = apRow.FirstPlaceVotes || apRow["1stPlaceVotes"] || apRow["First Place Votes"] || "";
+
+    const ccRank = ccRow.Rank || ccRow.rank || "";
+    const ccPts  = ccRow.Points || ccRow.Pts || "";
+    const ccFirst = ccRow.FirstPlaceVotes || ccRow["1stPlaceVotes"] || ccRow["First Place Votes"] || "";
+
+    const displayName = hlIllini(teamName);
+    const headlineRank = explicitRank || apRank;
+
+    return [
+      '<div>',
+        '<strong>', (headlineRank ? '#' + headlineRank + ' ' : ''), displayName, '</strong>',
+        '<div class="ranklines">',
+          '<div class="rankline">',
+            '<span class="chip">', (apRank ? 'AP #' + apRank : 'AP —'), '</span>',
+            (apPts  ? '<span class="chip">Pts ' + apPts  + '</span>' : ''),
+            (apFirst? '<span class="chip">(' + apFirst + ')</span>' : ''),
+          '</div>',
+          '<div class="rankline">',
+            '<span class="chip">', (ccRank ? 'Coaches #' + ccRank : 'Coaches —'), '</span>',
+            (ccPts  ? '<span class="chip">Pts ' + ccPts  + '</span>' : ''),
+            (ccFirst? '<span class="chip">(' + ccFirst + ')</span>' : ''),
+          '</div>',
+          '<div class="rankline">',
+            '<span class="chip ', (kp && kp<=25 ? 'good' : ''), '">', (kp ? 'KP #' + kp : 'KP —'), '</span>',
+          '</div>',
+          '<div class="rankline">',
+            '<span class="chip">', (record || 'Record —'), '</span>',
+          '</div>',
+        '</div>',
+      '</div>'
+    ].join("");
+  }
+
+  (async function(){
+    const mon = mondayOf(WEEK_START);
+    const sun = sundayOf(mon);
+    const days = weekDays(mon);
+    document.getElementById("weekLabel").textContent =
+      'Week of ' + mon.format("dddd, MMM D, YYYY") + ' – ' + sun.format("dddd, MMM D, YYYY") + ' (ET)';
+
+    try{
+      const [kenpom, ap, coaches, standings, schedule] = await Promise.all([
+        fetchCSV(URLS.kenpom),
+        fetchCSV(URLS.ap),
+        fetchCSV(URLS.coaches),
+        fetchCSV(URLS.standings),
+        fetchCSV(URLS.schedule)
+      ]);
+
+      const kpMap = buildKenPomMap(kenpom);
+      const apRowMap = indexPollRows(ap);
+      const ccRowMap = indexPollRows(coaches);
+      const apMap = indexRanks(ap, "Team", "Rank");
+      const ccMap = indexRanks(coaches, "Team", "Rank");
+      const recordMap = buildRecordMap(standings);
+      const schedIndex = buildScheduleIndex(schedule);
+
+      // AP Top N
+      const apTop = ap.filter(function(r){ return safeInt(r.Rank); });
+      const apN = apTop.length;
+      document.getElementById("apHeader").textContent = 'AP Top ' + apN + ' — Weekly Slate';
+      document.getElementById("apCount").textContent = apN + ' teams';
+
+      const apTable = document.getElementById("apTable");
+      renderWeekHeader(apTable, days, false);
+      const apTbody = apTable.querySelector("tbody");
+      apTbody.innerHTML = apTop.map(function(r){
+        const team = r.Team;
+        const infoBlock = teamInfoBlock(team, apRowMap, ccRowMap, kpMap, recordMap, r.Rank);
+        const dayCells = days.map(function(d){ return '<td>' + renderDayCell(team, d, schedIndex, apMap, ccMap, kpMap) + '</td>'; }).join("");
+        return [
+          '<tr>',
+            '<th class="sticky teamCol">',
+              infoBlock,
+            '</th>',
+            dayCells,
+          '</tr>'
+        ].join("");
+      }).join("");
+
+      // Illinois OOC
+      document.getElementById("oocCount").textContent = ILLINOIS_OOC.length + ' opponents';
+      const oocTable = document.getElementById("oocTable");
+      renderWeekHeader(oocTable, days, false);
+      const oocTbody = oocTable.querySelector("tbody");
+      oocTbody.innerHTML = ILLINOIS_OOC.map(function(name){
+        const infoBlock = teamInfoBlock(name, apRowMap, ccRowMap, kpMap, recordMap, null);
+        const dayCells = days.map(function(d){ return '<td>' + renderDayCell(name, d, schedIndex, apMap, ccMap, kpMap) + '</td>'; }).join("");
+        return [
+          '<tr>',
+            '<th class="sticky teamCol">', infoBlock, '</th>',
+            dayCells,
+          '</tr>'
+        ].join("");
+      }).join("");
+
+      // Big Ten
+      const bigTenRows = standings.filter(function(r){
+        const c = String(r.Conference||"").toLowerCase();
+        return c.indexOf("big ten") !== -1 || c === "b10" || c.indexOf("big-ten") !== -1;
+      });
+
+      bigTenRows.sort(function(a,b){
+        const apct = parseFloat(a.OverallPct||"0") || 0;
+        const bpct = parseFloat(b.OverallPct||"0") || 0;
+        if(bpct!==apct) return bpct - apct;
+        return parseWL(b.Overall).w - parseWL(a.Overall).w;
+      });
+
+      document.getElementById("b1gCount").textContent = bigTenRows.length + ' teams';
+
+      const b1gTable = document.getElementById("b1gTable");
+      renderWeekHeader(b1gTable, days, true);
+      const b1gBody = b1gTable.querySelector("tbody");
+      b1gBody.innerHTML = bigTenRows.map(function(r){
+        const team = r.Team;
+        const teamDisplay = hlIllini(team);
+        const chipsCell = rankChips(team, apMap, ccMap, kpMap);
+        const dayCells = days.map(function(d){ return '<td>' + renderDayCell(team, d, schedIndex, apMap, ccMap, kpMap) + '</td>'; }).join("");
+        const overallPct = (parseFloat(r.OverallPct)||0).toFixed(3);
+        const confPct = (parseFloat(r.ConfPct)||0).toFixed(3);
+        return [
+          '<tr>',
+            '<th class="sticky teamCol">',
+              '<strong>', teamDisplay, '</strong>',
+              '<div class="only-mobile">', chipsCell, '</div>',
+            '</th>',
+            '<td>', (r.Overall || "—"), ' <span class="muted tiny">(', overallPct, ')</span></td>',
+            '<td>', (r.ConfWL || "—"), ' <span class="muted tiny">(', confPct, ')</span></td>',
+            '<td>', chipsCell, '</td>',
+            dayCells,
+          '</tr>'
+        ].join("");
+      }).join("");
+
+    }catch(err){
+      console.error(err);
+      document.getElementById("weekLabel").textContent = "Error loading one or more CSVs. See console.";
+      alert("Error loading one or more CSVs. Open the browser console for details.");
+    }
+  })();
+  </script>
+</body>
+</html>
