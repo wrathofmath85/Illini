@@ -1,0 +1,633 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Women’s College Hoops — Weekly Board</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg:#0b1020; --card:#111735; --muted:#7e86a6; --text:#eaf0ff;
+      --chip:#19214a; --border:#222b5a; --hdr:#0d1330;
+      --good:#34d399; --warn:#fbbf24;
+      --illini-orange:#E84A27; --illini-blue:#13294B;
+
+      /* outcome tints */
+      --win-bg: rgba(52,211,153,.10);
+      --win-bd: #1f5e44;
+      --loss-bg: rgba(239,68,68,.10);
+      --loss-bd: #6b1f1f;
+
+      /* live-game tint (yellow) */
+      --live-bg: rgba(251,191,36,.16);
+      --live-bd: #7a4e0d;
+
+      /* ranked vs ranked (bright blue) */
+      --ranked-bg: rgba(59,130,246,.20);
+      --ranked-bd: #3b82f6;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:linear-gradient(180deg,#0b1020 0%, #0c163a 100%); color:var(--text); font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif}
+    .wrap{max-width:1300px; margin:28px auto; padding:0 16px;}
+    h1{font-size:28px;margin:0 0 6px 0;font-weight:800;letter-spacing:.2px}
+    .sub{color:var(--muted); margin-bottom:18px}
+
+    .section{background:var(--card); border:1px solid var(--border); border-radius:16px; padding:12px; margin-bottom:16px}
+    .section h2{margin:0 0 4px 0; font-size:20px; font-weight:800}
+    .meta{display:flex; align-items:center; gap:8px; color:var(--muted); font-size:12px; margin-bottom:10px}
+
+    .weekboard{width:100%; border-collapse:collapse; overflow:hidden; border-radius:12px}
+    .weekboard thead th{background:var(--hdr); color:#cfe2ff; font-weight:700; font-size:12px; padding:10px; border-bottom:1px solid var(--border); text-align:left; white-space:nowrap}
+    .weekboard tbody td, .weekboard tbody th{padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:top; font-size:13px}
+    .teamCol{white-space:nowrap}
+
+    .chip{display:inline-block; background:var(--chip); border:1px solid #2a3472; color:#dbe5ff; padding:2px 8px; border-radius:999px; font-size:11px}
+    .chip.good{border-color:#1f5e44; background:rgba(52,211,153,.12); color:#c9ffe8}
+    .chip.warn{border-color:#6b4b12; background:rgba(251,191,36,.12); color:#ffe9b8}
+
+    .ranklines{margin-top:4px; display:flex; flex-direction:column; gap:2px}
+    .rankline{display:flex; flex-wrap:wrap; gap:4px}
+
+    .game{display:flex; flex-direction:column; gap:2px; margin-bottom:6px; border:1px solid transparent; border-radius:10px; padding:6px}
+    .game.win{background:var(--win-bg); border-color:var(--win-bd)}
+    .game.loss{background:var(--loss-bg); border-color:var(--loss-bd)}
+    .game.liveGame{background:var(--live-bg); border-color:var(--live-bd)}
+    .game.rankedGame{background:var(--ranked-bg); border-color:var(--ranked-bd)}
+
+    .line{display:flex; gap:6px; align-items:center; flex-wrap:wrap}
+    .pill{padding:1px 6px; border-radius:6px; font-weight:700; font-size:10px; border:1px solid #2b356d; background:#0e1540}
+    .final{color:#c4ffd8; border-color:#2a5e48; background:#0f2b24}
+    .live{color:#ffedd5; border-color:#7a4e0d; background:#2a1a05}
+    .muted{color:var(--muted)}
+    .tiny{font-size:11px}
+    .nowrap{white-space:nowrap}
+    .tv{word-break:keep-all}
+
+    .scroller{overflow-x:auto}
+
+    @media (min-width: 900px){
+      .weekboard thead th.sticky, .weekboard tbody th.sticky{
+        position:sticky; left:0; z-index:2; background:linear-gradient(90deg, var(--hdr) 0%, var(--hdr) 70%, rgba(13,19,48,0) 100%);
+      }
+      .weekboard tbody th.sticky{background:linear-gradient(90deg, var(--card) 0%, var(--card) 70%, rgba(17,23,53,0) 100%); z-index:1}
+    }
+
+    .badge{font-size:11px; padding:2px 6px; border-radius:999px; background:#0d1330; border:1px solid #28306a; color:#cfe2ff}
+
+    .illini{
+      background:var(--illini-orange);
+      color:var(--illini-blue);
+      padding:0 6px; border-radius:6px; font-weight:800;
+    }
+
+    .only-mobile{display:none}
+    .cardbox{border-radius:16px;}
+
+    @media (max-width:720px){
+      .wrap{padding:0 10px; margin:22px auto}
+      h1{font-size:24px}
+      .section{background:transparent; border:none; padding:0 0 14px; margin-bottom:18px;}
+      .section h2{font-size:18px; padding:0 2px}
+      .meta{font-size:11px; padding:0 2px; margin-bottom:8px}
+
+      .cardbox{
+        background:var(--card);
+        border:1px solid var(--border);
+        border-radius:16px;
+        padding:8px;
+        overflow:hidden;
+      }
+      .cardbox .scroller{-webkit-overflow-scrolling:touch; padding-bottom:2px;}
+
+      .weekboard thead th{font-size:11px; padding:8px 8px}
+      .weekboard tbody td, .weekboard tbody th{font-size:12px; padding:8px}
+      .game{gap:1px; margin-bottom:8px}
+      .pill{font-size:9px}
+      .tiny{font-size:10px}
+
+      #apTable tbody td, #oocTable tbody td, #b1gTable tbody td{min-width:160px}
+
+      #apTable thead th:nth-child(2),
+      #apTable tbody td:nth-child(2),
+      #oocTable thead th:nth-child(2),
+      #oocTable tbody td:nth-child(2){display:none;}
+
+      #b1gTable thead th:nth-child(2),
+      #b1gTable tbody td:nth-child(2),
+      #b1gTable thead th:nth-child(3),
+      #b1gTable tbody td:nth-child(3),
+      #b1gTable thead th:nth-child(4),
+      #b1gTable tbody td:nth-child(4){display:none;}
+
+      .only-mobile{display:block; margin-top:6px}
+      .tv{white-space:normal; word-break:break-word}
+    }
+  </style>
+
+  <!-- PapaParse & Day.js -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/utc.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/timezone.js"></script>
+  <script>
+    dayjs.extend(dayjs_plugin_utc);
+    dayjs.extend(dayjs_plugin_timezone);
+  </script>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Women’s College Hoops — Weekly Board</h1>
+    <div class="sub" id="weekLabel">Loading week…</div>
+
+    <!-- AP Top N -->
+    <section class="section">
+      <h2 id="apHeader">AP Top — Weekly Slate</h2>
+      <div class="meta">
+        <span class="badge" id="apCount">0 teams</span>
+        <span class="muted tiny">AP poll + AP points / 1st-place votes</span>
+      </div>
+      <div class="cardbox">
+        <div class="scroller">
+          <table class="weekboard" id="apTable">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Illinois OOC -->
+    <section class="section">
+      <h2>Illinois OOC Opponents — Weekly Slate</h2>
+      <div class="meta">
+        <span class="badge" id="oocCount">0 opponents</span>
+        <span class="muted tiny"> </span>
+      </div>
+      <div class="cardbox">
+        <div class="scroller">
+          <table class="weekboard" id="oocTable">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Big Ten -->
+    <section class="section">
+      <h2>Big Ten — Standings & Weekly Slate</h2>
+      <div class="meta">
+        <span class="badge" id="b1gCount">0 teams</span>
+        <span class="muted tiny">Sorted by OverallPct (then wins)</span>
+      </div>
+      <div class="cardbox">
+        <div class="scroller">
+          <table class="weekboard" id="b1gTable">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <div class="muted tiny" style="margin-top:8px">
+      Sources: AP Top 25, Team Schedules, Standings. Times shown in ET.
+    </div>
+  </div>
+
+  <script>
+  // ========= CONFIG =========
+  const WEEK_START = "2025-11-03"; // Monday (ET)
+  const TZ = "America/New_York";
+
+  const URLS = {
+    // swap these to your WOMEN'S sheets
+    ap: "https://docs.google.com/spreadsheets/d/e/XXXXXXXXXXXX/pub?gid=AP_GID&single=true&output=csv",
+    /* schedules CSV includes: StatusName, StatusState, StatusCompleted, StatusDetail, Clock, Period, IsFinal, IsLive */
+    schedule: "https://docs.google.com/spreadsheets/d/e/XXXXXXXXXXXX/pub?gid=SCHEDULE_GID&single=true&output=csv",
+    standings: "https://docs.google.com/spreadsheets/d/e/XXXXXXXXXXXX/pub?gid=STANDINGS_GID&single=true&output=csv"
+  };
+
+  // Update if you have a different women’s OOC list
+  const ILLINOIS_OOC = [
+    "Jackson State Tigers","Florida Gulf Coast Eagles","Texas Tech Red Raiders","Colgate Raiders","Alabama Crimson Tide",
+    "Long Island University Sharks","UT Rio Grande Valley Vaqueros","UConn Huskies","Tennessee Volunteers","Missouri Tigers","Southern Jaguars"
+  ];
+
+  const ALIASES = new Map([
+    ["uconn","connecticut"],
+    ["ut-rio grande valley","texas rio grande valley"],
+    ["liubrooklyn","liu brooklyn"],
+    ["st johns","st. john's"],
+    ["saint johns","st. john's"],
+    ["jackson st","jackson state"]
+  ]);
+
+  function normalizeName(s){
+    if(!s) return "";
+    let t = String(s).trim().toLowerCase();
+    t = t.replace(/[\u2018\u2019\u201A\u201B\u2032\u2035']/g,"");
+    t = t.replace(/\./g,"");
+    t = t.replace(/&/g,"and");
+    t = t.replace(/\s+/g," ");
+    t = t.replace(/\bsaint\b/g,"st");
+    t = t.replace(/-+/g," ");
+    t = t.trim();
+    const alias = ALIASES.get(t.replace(/\s/g,""));
+    return alias ? alias : t;
+  }
+
+  function safeInt(x){ const n = parseInt(x,10); return Number.isFinite(n) ? n : null; }
+  function toBool(v){
+    if (typeof v === "boolean") return v;
+    if (v == null) return false;
+    const s = String(v).trim().toLowerCase();
+    return s === "true" || s === "1" || s === "yes";
+  }
+
+  function fetchCSV(url){
+    return new Promise((resolve,reject)=>{
+      Papa.parse(url, {
+        download:true, header:true, dynamicTyping:false, skipEmptyLines:true,
+        complete: (res)=> resolve(res.data),
+        error: (err)=> reject(err)
+      });
+    });
+  }
+
+  function mondayOf(dateStr){
+    const d = dayjs.tz(dateStr, TZ).startOf('day');
+    const dow = d.day(); const off = (dow===0) ? -6 : (1 - dow);
+    return d.add(off,'day');
+  }
+  function sundayOf(mon){ return mon.add(6,'day').endOf('day'); }
+  function weekDays(mon){ return Array.from({length:7}, (_,i)=> mon.add(i,'day')); }
+  function formatDayHead(d){ return d.format("ddd M/D"); }
+  function formatTimeET(startET){
+    if(!startET) return "";
+    const d = dayjs.tz(startET, TZ);
+    return d.isValid()? d.format("h:mm A") : String(startET);
+  }
+
+  // TV / streaming gather
+  function extractTVFromRow(r){
+    const candidates = [
+      r.TV, r.Tv, r.tv, r.Network, r.Television, r.Broadcast, r.Channel,
+      r["Time/TV"], r["Time / TV"], r.TimeTV, r["Time Tv"], r["Time tv"]
+    ];
+    let tv = (candidates.find(v => v && String(v).trim()) || "").toString().trim();
+    const streaming = (r.Streaming || r["Streams"] || r["Stream"] || "").toString().trim();
+    const clean = function(s){ return s.replace(/^—+$/,"").replace(/^\s*-\s*$/,"").trim(); };
+    tv = clean(tv); const streamClean = clean(streaming);
+    if(tv && streamClean) return tv + ", " + streamClean;
+    if(streamClean) return streamClean;
+    return tv;
+  }
+
+  function buildScheduleIndex(rows){
+    const byTeam = new Map();
+    function push(name, game){
+      const k = normalizeName(name);
+      if(!k) return;
+      if(!byTeam.has(k)) byTeam.set(k, []);
+      byTeam.get(k).push(game);
+    }
+    rows.forEach(function(r){
+      const g = {
+        id: r.GameId,
+        start: r.StartET,
+        status: r.Status || r.StatusName || "",
+        statusName: r.StatusName || "",
+        statusDetail: r.StatusDetail || "",
+        statusState: r.StatusState || "",
+        statusCompleted: toBool(r.StatusCompleted),
+        clock: r.Clock || "",
+        period: safeInt(r.Period),
+        isFinal: toBool(r.IsFinal),
+        isLive: toBool(r.IsLive),
+
+        home: r.Home, away: r.Away,
+        homeScore: r.HomeScore, awayScore: r.AwayScore,
+        tv: extractTVFromRow(r),
+        venue: r.Venue, city: r.City, state: r.State
+      };
+      push(r.Home, Object.assign({}, g, {isHome:true, opp:r.Away}));
+      push(r.Away, Object.assign({}, g, {isHome:false, opp:r.Home}));
+    });
+    return byTeam;
+  }
+
+  function gamesOnDayFor(team, day, schedIndex){
+    const k = normalizeName(team);
+    const start = day.startOf('day'); const end = day.endOf('day');
+    const arr = schedIndex.get(k) || [];
+    return arr.filter(function(g){
+      const t = dayjs.tz(g.start, TZ);
+      return t.isAfter(start.subtract(1,'ms')) && t.isBefore(end.add(1,'ms'));
+    }).sort(function(a,b){ return dayjs.tz(a.start,TZ)-dayjs.tz(b.start,TZ); });
+  }
+
+  function indexRanks(rows, keyField, valueField){
+    keyField = keyField || "Team";
+    valueField = valueField || "Rank";
+    const m = new Map();
+    rows.forEach(function(r){
+      const k = normalizeName(r[keyField]);
+      const v = safeInt(r[valueField]);
+      if(k && v != null) m.set(k, v);
+    });
+    return m;
+  }
+
+  function indexPollRows(rows){
+    const m = new Map();
+    rows.forEach(function(r){
+      const k = normalizeName(r.Team || r.team || "");
+      if(k) m.set(k, r);
+    });
+    return m;
+  }
+
+  function buildRecordMap(rows){
+    const m = new Map();
+    rows.forEach(function(r){
+      const k = normalizeName(r.Team || r.team || "");
+      if(k) m.set(k, r.Overall || r.OverallWL || r["Overall W-L"] || "");
+    });
+    return m;
+  }
+
+  function rankChips(teamName, apMap){
+    const k = normalizeName(teamName);
+    const ap = apMap.has(k) ? apMap.get(k) : null;
+    return [
+      '<div class="rankchips">',
+        '<span class="chip">', (ap ? 'AP #' + ap : 'AP —') ,'</span>',
+      '</div>'
+    ].join("");
+  }
+
+  function rankInline(teamName, apMap){
+    const k = normalizeName(teamName);
+    const ap = apMap.get(k);
+    if (ap == null) return "";
+    return ' <span class="tiny muted">(AP #' + ap + ')</span>';
+  }
+
+  function isIllini(name){
+    const raw = (name||"").toLowerCase();
+    const norm = normalizeName(name);
+    return raw.indexOf("illinois fighting illini") !== -1 || norm === "illinois";
+  }
+  function hlIllini(name){
+    return isIllini(name)
+      ? '<span class="illini">' + name + '</span>'
+      : name;
+  }
+
+  function isRankedAP(name, apMap){
+    const k = normalizeName(name);
+    return apMap.has(k);
+  }
+
+  /* ---- Score & outcome helpers ---- */
+
+  // Show score if data exists.
+  // Suppress "0–0" ONLY for future games with no score; always show for live/final.
+  function scoreStringForGame(g){
+    var hsRaw = g.homeScore != null ? String(g.homeScore).trim() : "";
+    var asRaw = g.awayScore != null ? String(g.awayScore).trim() : "";
+
+    // no data at all
+    if(!hsRaw && !asRaw) return "";
+
+    var hs = parseInt(hsRaw, 10);
+    var as = parseInt(asRaw, 10);
+    var hsIsNum = !isNaN(hs);
+    var asIsNum = !isNaN(as);
+
+    // If both are numeric, use numeric comparison
+    if(hsIsNum && asIsNum){
+      if(hs === 0 && as === 0 && !g.isLive && !g.isFinal) return "";
+      var hi = Math.max(hs, as);
+      var lo = Math.min(hs, as);
+      return " (" + hi + "–" + lo + ")";
+    }
+
+    // If both present but non-numeric, just show raw values
+    if(hsRaw && asRaw){
+      if(hsRaw === "0" && asRaw === "0" && !g.isLive && !g.isFinal) return "";
+      return " (" + hsRaw + "–" + asRaw + ")";
+    }
+
+    // If only one side present, show what we have
+    return " (" + (hsRaw || asRaw) + ")";
+  }
+
+  // Determine win/loss for the row's team. Returns "win" | "loss" | null.
+  function outcomeForRow(isHome, homeScore, awayScore){
+    var hs = parseInt(homeScore,10), as = parseInt(awayScore,10);
+    if(!(Number.isFinite(hs)&&Number.isFinite(as))) return null;
+    var teamScore = isHome ? hs : as;
+    var oppScore  = isHome ? as : hs;
+    if(teamScore > oppScore) return "win";
+    if(teamScore < oppScore) return "loss";
+    return null; // tie/unknown
+  }
+
+  function renderDayCell(team, day, schedIndex, apMap){
+    const games = gamesOnDayFor(team, day, schedIndex);
+    if(!games.length) return '<div class="muted tiny">—</div>';
+    return games.map(function(g){
+      const tvPiece = g.tv ? ' <span class="tv">• ' + g.tv + '</span>' : "";
+
+      const scoreStr = scoreStringForGame(g);
+      const atvs = g.isHome ? "vs" : "@";
+      const oppName = hlIllini(g.opp);
+      const oppRanks = rankInline(g.opp, apMap);
+      const timeStr = formatTimeET(g.start);
+
+      const outcome = outcomeForRow(g.isHome, g.homeScore, g.awayScore);
+      const outcomeClass = outcome ? ' ' + outcome : "";
+      const liveClass = g.isLive ? " liveGame" : "";
+
+      // bright blue highlight for future games between two AP-ranked teams
+      const rankedClass =
+        (!g.isFinal && !g.isLive && isRankedAP(team, apMap) && isRankedAP(g.opp, apMap))
+          ? " rankedGame"
+          : "";
+
+      return [
+        '<div class="game', outcomeClass, liveClass, rankedClass, '">',
+          '<div class="tiny">',
+            (timeStr ? timeStr + ' · ' : ''),
+            atvs, ' <strong>', oppName, '</strong>',
+            oppRanks,
+            scoreStr,
+            tvPiece,
+          '</div>',
+          '<div class="tiny muted">— ', (g.city || ""), (g.state ? ', ' + g.state : ''), '</div>',
+        '</div>'
+      ].join("");
+    }).join("");
+  }
+
+  function renderWeekHeader(tableEl, days, showRecordCols){
+    showRecordCols = !!showRecordCols;
+    const thead = tableEl.querySelector("thead");
+    const dayHeads = days.map(function(d){ return '<th>' + formatDayHead(d) + '</th>'; }).join("");
+    const midCols = showRecordCols
+      ? '<th>Overall</th><th>Conf</th><th>AP</th>'
+      : "";
+    thead.innerHTML = [
+      '<tr>',
+        '<th class="sticky teamCol">Team</th>',
+        midCols,
+        dayHeads,
+      '</tr>'
+    ].join("");
+  }
+
+  function parseWL(s){
+    const m = String(s||"").match(/(\d+)\D+(\d+)/);
+    return m ? {w:+m[1], l:+m[2]} : {w:0,l:0};
+  }
+
+  function teamInfoBlock(teamName, apRowMap, recordMap, explicitRank){
+    const k = normalizeName(teamName);
+    const apRow = apRowMap.get(k) || {};
+    const record = recordMap.get(k) || "";
+
+    const apRank = apRow.Rank || apRow.rank || "";
+    const apPts  = apRow.Points || apRow.Pts || "";
+    const apFirst = apRow.FirstPlaceVotes || apRow["1stPlaceVotes"] || apRow["First Place Votes"] || "";
+
+    const displayName = hlIllini(teamName);
+    const headlineRank = explicitRank || apRank;
+
+    return [
+      '<div>',
+        '<strong>', (headlineRank ? '#' + headlineRank + ' ' : ''), displayName, '</strong>',
+        '<div class="ranklines">',
+          '<div class="rankline">',
+            '<span class="chip">', (apRank ? 'AP #' + apRank : 'AP —'), '</span>',
+            (apPts  ? '<span class="chip">Pts ' + apPts  + '</span>' : ''),
+            (apFirst? '<span class="chip">(' + apFirst + ')</span>' : ''),
+          '</div>',
+          '<div class="rankline">',
+            '<span class="chip">', (record || 'Record —'), '</span>',
+          '</div>',
+        '</div>',
+      '</div>'
+    ].join("");
+  }
+
+  (async function(){
+    const mon = mondayOf(WEEK_START);
+    const sun = sundayOf(mon);
+    const days = weekDays(mon);
+    document.getElementById("weekLabel").textContent =
+      'Week of ' + mon.format("dddd, MMM D, YYYY") + ' – ' + sun.format("dddd, MMM D, YYYY") + ' (ET)';
+
+    try{
+      const [ap, standings, schedule] = await Promise.all([
+        fetchCSV(URLS.ap),
+        fetchCSV(URLS.standings),
+        fetchCSV(URLS.schedule)
+      ]);
+
+      const apRowMap = indexPollRows(ap);
+      const apMap = indexRanks(ap, "Team", "Rank");
+      const recordMap = buildRecordMap(standings);
+      const schedIndex = buildScheduleIndex(schedule);
+
+      // AP Top N
+      const apTop = ap.filter(function(r){ return safeInt(r.Rank); });
+      const apN = apTop.length;
+      document.getElementById("apHeader").textContent = 'AP Top ' + apN + ' — Weekly Slate';
+      document.getElementById("apCount").textContent = apN + ' teams';
+
+      const apTable = document.getElementById("apTable");
+      renderWeekHeader(apTable, days, false);
+      const apTbody = apTable.querySelector("tbody");
+      apTbody.innerHTML = apTop.map(function(r){
+        const team = r.Team;
+        const infoBlock = teamInfoBlock(team, apRowMap, recordMap, r.Rank);
+        const dayCells = days.map(function(d){ return '<td>' + renderDayCell(team, d, schedIndex, apMap) + '</td>'; }).join("");
+        return [
+          '<tr>',
+            '<th class="sticky teamCol">',
+              infoBlock,
+            '</th>',
+            dayCells,
+          '</tr>'
+        ].join("");
+      }).join("");
+
+      // Illinois OOC
+      document.getElementById("oocCount").textContent = ILLINOIS_OOC.length + ' opponents';
+      const oocTable = document.getElementById("oocTable");
+      renderWeekHeader(oocTable, days, false);
+      const oocTbody = oocTable.querySelector("tbody");
+      oocTbody.innerHTML = ILLINOIS_OOC.map(function(name){
+        const infoBlock = teamInfoBlock(name, apRowMap, recordMap, null);
+        const dayCells = days.map(function(d){ return '<td>' + renderDayCell(name, d, schedIndex, apMap) + '</td>'; }).join("");
+        return [
+          '<tr>',
+            '<th class="sticky teamCol">', infoBlock, '</th>',
+            dayCells,
+          '</tr>'
+        ].join("");
+      }).join("");
+
+      // Big Ten
+      const bigTenRows = standings.filter(function(r){
+        const c = String(r.Conference||"").toLowerCase();
+        return c.indexOf("big ten") !== -1 || c === "b10" || c.indexOf("big-ten") !== -1;
+      });
+
+      bigTenRows.sort(function(a,b){
+        const apct = parseFloat(a.OverallPct||"0") || 0;
+        const bpct = parseFloat(b.OverallPct||"0") || 0;
+        if(bpct!==apct) return bpct - apct;
+        return parseWL(b.Overall).w - parseWL(a.Overall).w;
+      });
+
+      document.getElementById("b1gCount").textContent = bigTenRows.length + ' teams';
+
+      const b1gTable = document.getElementById("b1gTable");
+      renderWeekHeader(b1gTable, days, true);
+      const b1gBody = b1gTable.querySelector("tbody");
+      b1gBody.innerHTML = bigTenRows.map(function(r){
+        const team = r.Team;
+        const teamDisplay = hlIllini(team);
+        const chipsCell = rankChips(team, apMap);
+        const dayCells = days.map(function(d){ return '<td>' + renderDayCell(team, d, schedIndex, apMap) + '</td>'; }).join("");
+        const overallPct = (parseFloat(r.OverallPct)||0).toFixed(3);
+        const confPct = (parseFloat(r.ConfPct)||0).toFixed(3);
+        return [
+          '<tr>',
+            '<th class="sticky teamCol">',
+              '<strong>', teamDisplay, '</strong>',
+              '<div class="only-mobile">', chipsCell, '</div>',
+            '</th>',
+            '<td>', (r.Overall || "—"), ' <span class="muted tiny">(', overallPct, ')</span></td>',
+            '<td>', (r.ConfWL || "—"), ' <span class="muted tiny">(', confPct, ')</span></td>',
+            '<td>', chipsCell, '</td>',
+            dayCells,
+          '</tr>'
+        ].join("");
+      }).join("");
+
+    }catch(err){
+      console.error(err);
+      document.getElementById("weekLabel").textContent = "Error loading one or more CSVs. See console.";
+      alert("Error loading one or more CSVs. Open the browser console for details.");
+    }
+  })();
+  </script>
+</body>
+</html>
