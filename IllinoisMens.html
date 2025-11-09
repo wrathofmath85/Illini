@@ -412,27 +412,40 @@
 
   /* ---- Score & outcome helpers ---- */
 
-  // Show score if numbers exist.
-  // Suppress "0–0" ONLY for future games with no score; always show for live/final.
-  function scoreStringForGame(g){
-    var hs = parseInt(g.homeScore,10);
-    var as = parseInt(g.awayScore,10);
+// ---- Score & outcome helpers ----
 
-    var hsValid = Number.isFinite(hs);
-    var asValid = Number.isFinite(as);
+// Show score if data exists.
+// Suppress "0–0" ONLY for future games with no score; always show for live/final.
+function scoreStringForGame(g){
+  var hsRaw = g.homeScore != null ? String(g.homeScore).trim() : "";
+  var asRaw = g.awayScore != null ? String(g.awayScore).trim() : "";
 
-    // truly no score data at all
-    if(!hsValid && !asValid) return "";
+  // no data at all
+  if(!hsRaw && !asRaw) return "";
 
-    // if one side missing, treat as 0 so live games with partial data still show something
-    if(!hsValid) hs = 0;
-    if(!asValid) as = 0;
+  var hs = parseInt(hsRaw, 10);
+  var as = parseInt(asRaw, 10);
+  var hsIsNum = !isNaN(hs);
+  var asIsNum = !isNaN(as);
 
-    if(hs===0 && as===0 && !g.isLive && !g.isFinal) return "";
-
-    var hi = Math.max(hs,as), lo = Math.min(hs,as);
+  // If both are numeric, use numeric comparison
+  if(hsIsNum && asIsNum){
+    if(hs === 0 && as === 0 && !g.isLive && !g.isFinal) return "";
+    var hi = Math.max(hs, as);
+    var lo = Math.min(hs, as);
     return " (" + hi + "–" + lo + ")";
   }
+
+  // If both present but non-numeric, just show raw values
+  if(hsRaw && asRaw){
+    if(hsRaw === "0" && asRaw === "0" && !g.isLive && !g.isFinal) return "";
+    return " (" + hsRaw + "–" + asRaw + ")";
+  }
+
+  // If only one side present, show what we have
+  return " (" + (hsRaw || asRaw) + ")";
+}
+
 
   // Determine win/loss for the row's team. Returns "win" | "loss" | null.
   function outcomeForRow(isHome, homeScore, awayScore){
