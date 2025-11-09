@@ -265,14 +265,6 @@
   function formatDayHead(d){ return d.format("ddd M/D"); }
   function formatTimeET(startET){ if(!startET) return ""; const d = dayjs.tz(startET, TZ); return d.isValid()? d.format("h:mm A") : String(startET); }
 
-  // Prefer CSV booleans; show clock on LIVE
-  function statusPillFromGame(g){
-    if (g.isFinal) return `<span class="pill final">FINAL</span>`;
-    if (g.isLive)  return `<span class="pill live">LIVE${g.clock ? " " + g.clock : ""}</span>`;
-    const label = g.statusDetail || g.statusName || g.status || "";
-    return `<span class="pill">${label || "—"}</span>`;
-  }
-
   // TV / streaming gather
   function extractTVFromRow(r){
     const candidates = [
@@ -445,11 +437,11 @@
     if(!games.length) return `<div class="muted tiny">—</div>`;
     return games.map(g=>{
       const tvPiece = g.tv ? ` <span class="tv">• ${g.tv}</span>` : "";
-
       const scoreStr = scoreStringForGame(g);
       const atvs = g.isHome ? "vs" : "@";
       const oppName = hlIllini(g.opp);
       const oppRanks = rankInline(g.opp, apMap, ccMap, kpMap);
+      const timeStr = formatTimeET(g.start);
 
       const outcome = outcomeForRow(g.isHome, g.homeScore, g.awayScore);
       const outcomeClass = outcome ? ` ${outcome}` : "";
@@ -461,17 +453,11 @@
           ? " rankedGame"
           : "";
 
-      // ALWAYS show status + time line, including future games (time not in pill)
-      const topLine = `
-        <div class="line">
-          ${statusPillFromGame(g)}
-          <span class="nowrap tiny">${formatTimeET(g.start)}</span>
-        </div>`;
-
       return `
         <div class="game${outcomeClass}${liveClass}${rankedClass}">
-          ${topLine}
-          <div class="tiny">${atvs} <strong>${oppName}</strong>${oppRanks}${scoreStr}${tvPiece}</div>
+          <div class="tiny">
+            ${timeStr ? `${timeStr} · ` : ""}${atvs} <strong>${oppName}</strong>${oppRanks}${scoreStr}${tvPiece}
+          </div>
           <div class="tiny muted">— ${g.city || ""}${g.state?`, ${g.state}`:""}</div>
         </div>
       `;
@@ -504,148 +490,4 @@
 
     const apRank = apRow.Rank || apRow.rank || "";
     const apPts  = apRow.Points || apRow.Pts || "";
-    const apFirst = apRow.FirstPlaceVotes || apRow["1stPlaceVotes"] || apRow["First Place Votes"] || "";
-
-    const ccRank = ccRow.Rank || ccRow.rank || "";
-    const ccPts  = ccRow.Points || ccRow.Pts || "";
-    const ccFirst = ccRow.FirstPlaceVotes || ccRow["1stPlaceVotes"] || ccRow["First Place Votes"] || "";
-
-    const displayName = hlIllini(teamName);
-    const headlineRank = explicitRank || apRank;
-
-    return `
-      <div>
-        <strong>${headlineRank ? `#${headlineRank} ` : ""}${displayName}</strong>
-        <div class="ranklines">
-          <div class="rankline">
-            <span class="chip">${apRank ? `AP #${apRank}` : "AP —"}</span>
-            ${apPts ? `<span class="chip">Pts ${apPts}</span>` : ""}
-            ${apFirst ? `<span class="chip">(${apFirst})</span>` : ""}
-          </div>
-          <div class="rankline">
-            <span class="chip">${ccRank ? `Coaches #${ccRank}` : "Coaches —"}</span>
-            ${ccPts ? `<span class="chip">Pts ${ccPts}</span>` : ""}
-            ${ccFirst ? `<span class="chip">(${ccFirst})</span>` : ""}
-          </div>
-          <div class="rankline">
-            <span class="chip ${kp && kp<=25 ? "good" : ""}">${kp ? `KP #${kp}` : "KP —"}</span>
-          </div>
-          <div class="rankline">
-            <span class="chip">${record || "Record —"}</span>
-          </div>
-        </div>
-      </div>
-    `;
-  }
-
-  (async function(){
-    const mon = mondayOf(WEEK_START);
-    const sun = sundayOf(mon);
-    const days = weekDays(mon);
-    document.getElementById("weekLabel").textContent =
-      `Week of ${mon.format("dddd, MMM D, YYYY")} – ${sun.format("dddd, MMM D, YYYY")} (ET)`;
-
-    try{
-      const [kenpom, ap, coaches, standings, schedule] = await Promise.all([
-        fetchCSV(URLS.kenpom),
-        fetchCSV(URLS.ap),
-        fetchCSV(URLS.coaches),
-        fetchCSV(URLS.standings),
-        fetchCSV(URLS.schedule)
-      ]);
-
-      const kpMap = buildKenPomMap(kenpom);
-      const apRowMap = indexPollRows(ap);
-      const ccRowMap = indexPollRows(coaches);
-      const apMap = indexRanks(ap, "Team", "Rank");
-      const ccMap = indexRanks(coaches, "Team", "Rank");
-      const recordMap = buildRecordMap(standings);
-      const schedIndex = buildScheduleIndex(schedule);
-
-      // AP Top N
-      const apTop = ap.filter(r=> safeInt(r.Rank));
-      const apN = apTop.length;
-      document.getElementById("apHeader").textContent = `AP Top ${apN} — Weekly Slate`;
-      document.getElementById("apCount").textContent = `${apN} teams`;
-
-      const apTable = document.getElementById("apTable");
-      renderWeekHeader(apTable, days, false);
-      const apTbody = apTable.querySelector("tbody");
-      apTbody.innerHTML = apTop.map(r=>{
-        const team = r.Team;
-        const infoBlock = teamInfoBlock(team, apRowMap, ccRowMap, kpMap, recordMap, r.Rank);
-        const dayCells = days.map(d=> `<td>${renderDayCell(team, d, schedIndex, apMap, ccMap, kpMap)}</td>`).join("");
-        return `
-          <tr>
-            <th class="sticky teamCol">
-              ${infoBlock}
-            </th>
-            ${dayCells}
-          </tr>
-        `;
-      }).join("");
-
-      // Illinois OOC
-      document.getElementById("oocCount").textContent = `${ILLINOIS_OOC.length} opponents`;
-      const oocTable = document.getElementById("oocTable");
-      renderWeekHeader(oocTable, days, false);
-      const oocTbody = oocTable.querySelector("tbody");
-      oocTbody.innerHTML = ILLINOIS_OOC.map(name=>{
-        const infoBlock = teamInfoBlock(name, apRowMap, ccRowMap, kpMap, recordMap, null);
-        const dayCells = days.map(d=> `<td>${renderDayCell(name, d, schedIndex, apMap, ccMap, kpMap)}</td>`).join("");
-        return `
-          <tr>
-            <th class="sticky teamCol">${infoBlock}</th>
-            ${dayCells}
-          </tr>
-        `;
-      }).join("");
-
-      // Big Ten
-      const bigTenRows = standings.filter(r=>{
-        const c = String(r.Conference||"").toLowerCase();
-        return c.includes("big ten") || c === "b10" || c.includes("big-ten");
-      });
-
-      bigTenRows.sort((a,b)=>{
-        const apct = parseFloat(a.OverallPct||"0") || 0;
-        const bpct = parseFloat(b.OverallPct||"0") || 0;
-        if(bpct!==apct) return bpct - apct;
-        return parseWL(b.Overall).w - parseWL(a.Overall).w;
-      });
-
-      document.getElementById("b1gCount").textContent = `${bigTenRows.length} teams`;
-
-      const b1gTable = document.getElementById("b1gTable");
-      renderWeekHeader(b1gTable, days, true);
-      const b1gBody = b1gTable.querySelector("tbody");
-      b1gBody.innerHTML = bigTenRows.map(r=>{
-        const team = r.Team;
-        const teamDisplay = hlIllini(team);
-        const chipsCell = `${rankChips(team, apMap, ccMap, kpMap)}`;
-        const dayCells = days.map(d=> `<td>${renderDayCell(team, d, schedIndex, apMap, ccMap, kpMap)}</td>`).join("");
-        const overallPct = (parseFloat(r.OverallPct)||0).toFixed(3);
-        const confPct = (parseFloat(r.ConfPct)||0).toFixed(3);
-        return `
-          <tr>
-            <th class="sticky teamCol">
-              <strong>${teamDisplay}</strong>
-              <div class="only-mobile">${chipsCell}</div>
-            </th>
-            <td>${r.Overall || "—"} <span class="muted tiny">(${overallPct})</span></td>
-            <td>${r.ConfWL || "—"} <span class="muted tiny">(${confPct})</span></td>
-            <td>${chipsCell}</td>
-            ${dayCells}
-          </tr>
-        `;
-      }).join("");
-
-    }catch(err){
-      console.error(err);
-      document.getElementById("weekLabel").textContent = "Error loading one or more CSVs. See console.";
-      alert("Error loading one or more CSVs. Open the browser console for details.");
-    }
-  })();
-  </script>
-</body>
-</html>
+    const apFirst = apRow.FirstPlaceVotes || apRow["1stPlac]()
