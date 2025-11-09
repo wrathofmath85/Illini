@@ -161,7 +161,7 @@
       <h2>Illinois OOC Opponents — Weekly Slate</h2>
       <div class="meta">
         <span class="badge" id="oocCount">0 opponents</span>
-        <span class="muted tiny">Opponents list from your spec</span>
+        <span class="muted tiny"> </span>
       </div>
       <div class="cardbox">
         <div class="scroller">
@@ -407,12 +407,24 @@
 
   /* ---- Score & outcome helpers ---- */
 
-  // Show score if both numbers exist.
-  // Suppress "0–0" for future games, but ALWAYS show for live/final.
+  // Show score if numbers exist.
+  // Suppress "0–0" ONLY for future games with no score; always show for live/final.
   function scoreStringForGame(g){
-    const hs = parseInt(g.homeScore,10), as = parseInt(g.awayScore,10);
-    if(!(Number.isFinite(hs) && Number.isFinite(as))) return "";
+    let hs = parseInt(g.homeScore,10);
+    let as = parseInt(g.awayScore,10);
+
+    const hsValid = Number.isFinite(hs);
+    const asValid = Number.isFinite(as);
+
+    // truly no score data at all
+    if(!hsValid && !asValid) return "";
+
+    // if one side missing, treat as 0 so live games with partial data still show something
+    if(!hsValid) hs = 0;
+    if(!asValid) as = 0;
+
     if(hs===0 && as===0 && !g.isLive && !g.isFinal) return "";
+
     const hi = Math.max(hs,as), lo = Math.min(hs,as);
     return ` (${hi}–${lo})`;
   }
@@ -449,13 +461,12 @@
           ? " rankedGame"
           : "";
 
-      const showTopLine = g.isFinal || g.isLive; // hide status/time for future games
-      const topLine = showTopLine
-        ? `<div class="line">
-             ${statusPillFromGame(g)}
-             <span class="nowrap tiny">${formatTimeET(g.start)}</span>
-           </div>`
-        : "";
+      // ALWAYS show status + time line, including future games (time not in pill)
+      const topLine = `
+        <div class="line">
+          ${statusPillFromGame(g)}
+          <span class="nowrap tiny">${formatTimeET(g.start)}</span>
+        </div>`;
 
       return `
         <div class="game${outcomeClass}${liveClass}${rankedClass}">
