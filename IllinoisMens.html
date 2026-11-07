@@ -23,6 +23,9 @@
     .wrap{max-width:1300px; margin:28px auto; padding:0 16px;}
     h1{font-size:28px;margin:0 0 6px 0;font-weight:800;letter-spacing:.2px}
     .sub{color:var(--muted); margin-bottom:10px}
+    .switch{display:inline-flex; gap:2px; background:var(--chip); border:1px solid #2a3472; border-radius:999px; padding:2px; margin:2px 0 10px}
+    .switch a{color:#cfe2ff; text-decoration:none; font-size:13px; font-weight:600; padding:4px 12px; border-radius:999px}
+    .switch a.on{background:var(--illini-orange); color:#fff}
 
     .nav{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:18px}
     .nav button{font:inherit; font-size:13px; font-weight:600; color:#dbe5ff; background:var(--chip); border:1px solid #2a3472; border-radius:999px; padding:6px 12px; cursor:pointer}
@@ -109,7 +112,8 @@
 </head>
 <body>
   <div class="wrap">
-    <h1>College Hoops — Weekly Board</h1>
+    <h1>Men’s College Hoops — Weekly Board</h1>
+    <div class="switch"><a class="on" href="IllinoisMens">Men’s</a><a href="IllinoisWomens">Women’s</a></div>
     <div class="sub" id="weekLabel">Loading week…</div>
     <div class="nav">
       <button id="prevBtn" type="button">‹ Prev week</button>
@@ -240,8 +244,13 @@
     b.coaches = pack(rl.find(r => r.type === 'usa' || /coach/i.test(r.name || '')));
 
     // Big Ten standings
-    const entries = [];
-    (function walk(n){ if (!n || typeof n !== 'object') return; if (n.standings && n.standings.entries) entries.push(...n.standings.entries); (n.children || []).forEach(walk); })(st);
+    let entries = [];
+    const walk = n => { if (!n || typeof n !== 'object') return; if (n.standings && n.standings.entries) entries.push(...n.standings.entries); (n.children || []).forEach(walk); };
+    walk(st);
+    if (entries.filter(e => BIG_TEN_IDS.includes(String(e.team.id))).length < 9) {   // group id didn't work → pull all conferences
+      entries = [];
+      walk(await getJSON(ESPN_V2 + '/standings?season=' + s).catch(() => null));
+    }
     const rec = s => { const m = String(s || '').match(/(\d+)\s*-\s*(\d+)/); return m ? { w:+m[1], l:+m[2] } : null; };
     const pct = r => r && (r.w + r.l) ? r.w / (r.w + r.l) : 0;
     b.bigTen = entries.filter(e => BIG_TEN_IDS.includes(String(e.team.id))).map(e => {
