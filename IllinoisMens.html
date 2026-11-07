@@ -156,7 +156,7 @@
 
   <script>
   // ========= CONFIG =========
-  // Paste your Apps Script web app URL (ends in /exec) here:
+  // Apps Script web app URL (ends in /exec) — only used for T-Rank now:
   const API_URL = "https://script.google.com/macros/s/AKfycbxiyS3UszPSWazCplXSAICZpw3LeffOpz-eg8qH6J3GTV_4JnVRyFHV5WArj7g8Mmue/exec";
   const TZ = "America/New_York";
   const LIVE_REFRESH_MS = 60 * 1000;        // while any game on the board is live
@@ -190,20 +190,173 @@
     load(true);
   }
 
-  // ========= DATA =========
-  async function load(showLoading){
+  // ========= DATA (straight from ESPN in the browser; T-Rank via Apps Script) =========
+  const ESPN    = 'https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball';
+  const ESPN_V2 = 'https://site.api.espn.com/apis/v2/sports/basketball/mens-college-basketball';
+  const ILLINOIS_ID = '356';
+  const BIG_TEN_IDS = ['356','2509','84','130','127','194','275','2294','135','158','77','213','164','120','26','30','2483','264'];
+  const BASE_MAX_AGE_MS = 30 * 60 * 1000;   // re-pull polls/standings/T-Rank every 30 min
+
+  // Torvik name → ESPN name, for names that don't normalize the same. More can go on the sheet's Aliases tab.
+  const BUILTIN_ALIASES = {
+    'connecticut':'uconn', 'mississippi':'ole miss', 'n.c. state':'nc state', 'miami fl':'miami', 'miami oh':'miami (oh)',
+    'liu':'long island university', 'liu brooklyn':'long island university', 'illinois chicago':'uic',
+    'louisiana lafayette':'louisiana', 'texas a&m corpus chris':'texas a&m-corpus christi', 'umkc':'kansas city',
+    'fiu':'florida international', 'fau':'florida atlantic', 'usc upstate':'south carolina upstate', 'nicholls st.':'nicholls',
+    'mcneese st.':'mcneese', 'arkansas little rock':'little rock', 'tennessee martin':'ut martin', 'st. francis pa':'saint francis',
+    'grambling st.':'grambling', 'seattle':'seattle u', 'detroit':'detroit mercy', 'iupui':'iu indianapolis', 'iu indy':'iu indianapolis',
+    'queens':'queens university', 'loyola md':'loyola maryland', 'hawaii':"hawai'i", 'sam houston st.':'sam houston',
+    'college of charleston':'charleston', 'southeast missouri st.':'southeast missouri state', 'texas rio grande valley':'ut rio grande valley'
+  };
+
+  let base = null, baseAt = 0, trankData = null;
+  const dayCache = new Map();      // 'YYYYMMDD' → [games]
+  const teamReg = new Map();       // espn id → team object (for names + T-Rank matching)
+
+  async function getJSON(url){
+    const r = await fetch(url, { cache: 'no-store' });
+    if (!r.ok) throw new Error('HTTP ' + r.status + ' from ' + url.replace(/^https:\/\/[^/]+/, '').split('?')[0]);
+    return r.json();
+  }
+  function season(){ const n = dayjs().tz(TZ); return n.month() >= 6 ? n.year() + 1 : n.year(); }
+  function reg(t){ if (t && t.id != null && !teamReg.has(String(t.id))) teamReg.set(String(t.id), t); }
+  function tname(t){ return t.location || t.shortDisplayName || t.displayName || t.name; }
+
+  function norm(s){
+    let t = String(s || '').toLowerCase().trim();
+    t = t.replace(/[‘’‚‛′‵']/g, '').replace(/\./g, '').replace(/[()]/g, ' ').replace(/-/g, ' ');
+    t = t.replace(/\s+/g, ' ').trim();
+    t = t.replace(/^st /, 'saint ').replace(/ st$/, ' state').replace(/ st /g, ' state ').replace(/\bsaint\b/g, 'st');
+    return t;
+  }
+
+  async function loadBase(){
+    const errs = [];
+    const s = season();
+    const [rk, st, sch, tr] = await Promise.all([
+      getJSON(ESPN + '/rankings').catch(e => (errs.push('polls: ' + e.message), null)),
+      getJSON(ESPN_V2 + '/standings?group=7&season=' + s).catch(e => (errs.push('standings: ' + e.message), null)),
+      getJSON(ESPN + '/teams/' + ILLINOIS_ID + '/schedule?season=' + s + '&seasontype=2').catch(e => (errs.push('Illini schedule: ' + e.message), null)),
+      /PASTE_YOUR/.test(API_URL) ? Promise.resolve(null)
+        : getJSON(API_URL).catch(e => (errs.push('T-Rank: ' + e.message), null))
+    ]);
+    const b = { errs };
+
+    // polls
+    const pack = r => !r ? null : { headline: r.headline || r.name || '', ranks: (r.ranks || []).map(x => {
+      reg(x.team);
+      return { id: String(x.team.id), name: tname(x.team), rank: x.current, prev: x.previous, pts: x.points, fpv: x.firstPlaceVotes || 0, rec: x.recordSummary || '' };
+    })};
+    const rl = (rk && rk.rankings) || [];
+    b.ap = pack(rl.find(r => r.type === 'ap' || /^ap/i.test(r.name || '')));
+    b.coaches = pack(rl.find(r => r.type === 'usa' || /coach/i.test(r.name || '')));
+
+    // Big Ten standings
+    const entries = [];
+    (function walk(n){ if (!n || typeof n !== 'object') return; if (n.standings && n.standings.entries) entries.push(...n.standings.entries); (n.children || []).forEach(walk); })(st);
+    const rec = s => { const m = String(s || '').match(/(\d+)\s*-\s*(\d+)/); return m ? { w:+m[1], l:+m[2] } : null; };
+    const pct = r => r && (r.w + r.l) ? r.w / (r.w + r.l) : 0;
+    b.bigTen = entries.filter(e => BIG_TEN_IDS.includes(String(e.team.id))).map(e => {
+      reg(e.team);
+      let overall = null, conf = null, w = null, l = null;
+      (e.stats || []).forEach(x => {
+        const key = [x.name, x.type, x.abbreviation, x.shortDisplayName].join('|').toLowerCase();
+        const val = x.summary || x.displayValue;
+        if (/conf/.test(key) && !/wins|losses|percent|behind/.test(String(x.name || '').toLowerCase()) && rec(val)) conf = rec(val);
+        else if ((x.type === 'total' || x.name === 'overall') && rec(val)) overall = rec(val);
+        if (x.name === 'wins') w = x.value;
+        if (x.name === 'losses') l = x.value;
+      });
+      if (!overall && w != null && l != null) overall = { w, l };
+      return { id: String(e.team.id), overall: overall ? overall.w + '-' + overall.l : '', pct: pct(overall),
+               conf: conf ? conf.w + '-' + conf.l : '', confPct: pct(conf), w: overall ? overall.w : 0 };
+    });
+    const have = new Set(b.bigTen.map(t => t.id));
+    BIG_TEN_IDS.filter(id => !have.has(id)).forEach(id => b.bigTen.push({ id, overall:'', pct:0, conf:'', confPct:0, w:0 }));
+
+    // Illinois non-conference opponents
+    const seen = new Set(); b.ooc = [];
+    ((sch && sch.events) || []).forEach(ev => (((ev.competitions || [])[0] || {}).competitors || []).forEach(c => {
+      const t = c.team || {}; const id = String(t.id || c.id || '');
+      reg(t);
+      if (!id || id === ILLINOIS_ID || BIG_TEN_IDS.includes(id) || seen.has(id)) return;
+      seen.add(id); b.ooc.push(id);
+    }));
+
+    if (tr && tr.ok) trankData = tr;
+    base = b; baseAt = Date.now();
+  }
+
+  function compactGame(ev){
+    const comp = (ev.competitions || [])[0]; if (!comp) return null;
+    const cs = comp.competitors || [];
+    const home = cs.find(c => c.homeAway === 'home') || cs[0], away = cs.find(c => c.homeAway === 'away') || cs[1];
+    if (!home || !away) return null;
+    reg(home.team); reg(away.team);
+    const type = ((ev.status || comp.status || {}).type) || {};
+    const tv = [];
+    (comp.broadcasts || []).forEach(b => (b.names || []).forEach(n => tv.includes(n) || tv.push(n)));
+    if (!tv.length) (comp.geoBroadcasts || []).forEach(b => { const n = b.media && b.media.shortName; if (n && !tv.includes(n)) tv.push(n); });
+    const v = comp.venue || {};
+    return {
+      id: ev.id, start: ev.date, state: type.state || 'pre', done: !!type.completed,
+      detail: type.shortDetail || type.detail || '', canceled: /cancel|postpon/i.test(type.name || ''),
+      neutral: !!comp.neutralSite, conf: !!comp.conferenceCompetition, tv: tv.join(', '),
+      venue: v.fullName || '', city: (v.address && v.address.city) || '', st: (v.address && v.address.state) || '',
+      h: { id: String(home.team.id), s: home.score != null ? String(home.score) : '' },
+      a: { id: String(away.team.id), s: away.score != null ? String(away.score) : '' }
+    };
+  }
+
+  async function loadDay(ymd, force){
+    if (!force && dayCache.has(ymd)) return;
+    const j = await getJSON(ESPN + '/scoreboard?dates=' + ymd + '&groups=50&limit=1000');
+    dayCache.set(ymd, (j.events || []).map(compactGame).filter(Boolean));
+  }
+
+  function matchTRank(){
+    const out = {};
+    if (!trankData) return out;
+    const alias = {};
+    Object.entries(BUILTIN_ALIASES).forEach(([k,v]) => alias[norm(k)] = norm(v));
+    (trankData.aliases || []).forEach(([k,v]) => alias[norm(k)] = norm(v));
+    const byName = {};
+    teamReg.forEach((t, id) => {
+      const school = t.displayName && t.name ? t.displayName.replace(new RegExp('\\s*' + t.name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '$'), '') : '';
+      [t.location, t.shortDisplayName, school, t.abbreviation].forEach(n => { const k = norm(n); if (k && !byName[k]) byName[k] = id; });
+    });
+    (trankData.trank || []).forEach(([rank, team]) => {
+      const k = norm(team); const id = byName[alias[k] || k] || byName[k];
+      if (id && out[id] == null) out[id] = rank;
+    });
+    return out;
+  }
+
+  async function load(showLoading, isAuto){
     clearTimeout(refreshTimer);
-    const wk = curMonday.format('YYYY-MM-DD');
+    const mon = curMonday, wk = mon.format('YYYY-MM-DD');
     renderWeekLabel();
     if (showLoading) setStatus('Loading…');
     try{
-      if (/PASTE_YOUR/.test(API_URL)) throw new Error('Set API_URL at the top of the page to your Apps Script /exec URL.');
-      const res = await fetch(API_URL + '?week=' + wk, { cache: 'no-store' });
-      const data = await res.json();
-      if (!data.ok) throw new Error(data.error || 'Backend error');
-      if (data.week !== wk) return;           // user moved on to another week
-      D = data; buildCtx(); render();
-      hideErr();
+      if (!base || Date.now() - baseAt > BASE_MAX_AGE_MS) await loadBase();
+      const today = dayjs().tz(TZ);
+      const ymds = Array.from({length:7}, (_,i) => mon.add(i,'day').format('YYYYMMDD'));
+      // on auto-refresh only re-pull today and yesterday (late games); other days come from cache
+      const fresh = new Set([today.format('YYYYMMDD'), today.subtract(1,'day').format('YYYYMMDD')]);
+      await Promise.all(ymds.map(d => loadDay(d, isAuto ? fresh.has(d) : (d >= today.subtract(1,'day').format('YYYYMMDD')))));
+      if (curMonday.format('YYYY-MM-DD') !== wk) return;     // user moved to another week meanwhile
+
+      const games = ymds.flatMap(d => dayCache.get(d) || []);
+      const teams = {};
+      teamReg.forEach((t, id) => teams[id] = { n: tname(t) });
+      D = {
+        week: wk, generated: new Date().toISOString(), illinoisId: ILLINOIS_ID,
+        live: games.some(g => g.state === 'in'),
+        ap: base.ap, coaches: base.coaches, bigTen: base.bigTen, ooc: base.ooc,
+        trank: matchTRank(), teams, games
+      };
+      buildCtx(); render();
+      if (base.errs.length) showErr('Some data didn’t load: ' + base.errs.join(' · ')); else hideErr();
     }catch(err){
       console.error(err);
       showErr('Couldn’t load the board: ' + err.message + (D ? ' (showing last data)' : ''));
@@ -215,10 +368,10 @@
     clearTimeout(refreshTimer);
     const isCurrent = curMonday.isSame(thisMonday(), 'day');
     const ms = D && D.live ? LIVE_REFRESH_MS : (isCurrent ? IDLE_REFRESH_MS : 0);
-    if (ms) refreshTimer = setTimeout(() => { if (!document.hidden) load(false); else scheduleRefresh(); }, ms);
+    if (ms) refreshTimer = setTimeout(() => { if (!document.hidden) load(false, true); else scheduleRefresh(); }, ms);
     updateStatus();
   }
-  document.addEventListener('visibilitychange', () => { if (!document.hidden && D && D.live) load(false); });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && D && D.live) load(false, true); });
 
   function buildCtx(){
     const ap = new Map(), cc = new Map();
