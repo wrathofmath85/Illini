@@ -36,11 +36,12 @@
     .section h2{margin:0 0 4px 0; font-size:20px; font-weight:800}
     .meta{display:flex; align-items:center; gap:8px; color:var(--muted); font-size:12px; margin-bottom:10px; flex-wrap:wrap}
 
-    .weekboard{width:100%; border-collapse:collapse; overflow:hidden; border-radius:12px}
+    .weekboard{width:100%; border-collapse:collapse; border-radius:12px}
     .weekboard thead th{background:var(--hdr); color:#cfe2ff; font-weight:700; font-size:12px; padding:10px; border-bottom:1px solid var(--border); text-align:left; white-space:nowrap}
     .weekboard thead th.today{color:#fff; box-shadow:inset 0 -2px 0 var(--illini-orange)}
     .weekboard tbody td, .weekboard tbody th{padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:top; font-size:13px; text-align:left; font-weight:400}
     .teamCol{white-space:nowrap}
+    .weekboard tr.rvDivider th, .weekboard tr.rvDivider td{background:var(--hdr); color:#cfe2ff; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; padding:6px 10px}
 
     .chip{display:inline-block; background:var(--chip); border:1px solid #2a3472; color:#dbe5ff; padding:2px 8px; border-radius:999px; font-size:11px}
     .chip.good{border-color:#1f5e44; background:rgba(52,211,153,.12); color:#c9ffe8}
@@ -67,12 +68,10 @@
     .illini{background:var(--illini-orange); color:var(--illini-blue); padding:0 6px; border-radius:6px; font-weight:800}
     .err{background:#2b0f0f; border:1px solid #6b1f1f; color:#ffd1d1; border-radius:12px; padding:10px 12px; margin-bottom:16px; display:none}
 
-    @media (min-width: 900px){
-      .weekboard thead th.sticky, .weekboard tbody th.sticky{
-        position:sticky; left:0; z-index:2; background:linear-gradient(90deg, var(--hdr) 0%, var(--hdr) 70%, rgba(13,19,48,0) 100%);
-      }
-      .weekboard tbody th.sticky{background:linear-gradient(90deg, var(--card) 0%, var(--card) 70%, rgba(17,23,53,0) 100%); z-index:1}
-    }
+    /* frozen team column (all screen sizes) */
+    .weekboard{border-collapse:separate; border-spacing:0}
+    .weekboard th.sticky{position:sticky; left:0; z-index:2; background:var(--card); box-shadow:6px 0 8px -6px rgba(0,0,0,.6)}
+    .weekboard thead th.sticky{background:var(--hdr); z-index:3}
 
     .only-mobile{display:none}
     .cardbox{border-radius:16px;}
@@ -90,7 +89,11 @@
       .game{gap:1px; margin-bottom:8px}
       .pill{font-size:9px}
       .tiny{font-size:10px}
-      #apTable tbody td, #oocTable tbody td, #b1gTable tbody td{min-width:160px}
+      #apTable tbody td, #oocTable tbody td, #b1gTable tbody td{min-width:150px}
+      .weekboard th.sticky{width:112px; min-width:112px; max-width:112px; white-space:normal; padding-right:6px}
+      .weekboard th.sticky .chip{font-size:10px; padding:1px 6px}
+      .weekboard th.sticky .pts{display:none}
+      .cardbox{padding:4px}
       #b1gTable thead th:nth-child(2), #b1gTable tbody td:nth-child(2),
       #b1gTable thead th:nth-child(3), #b1gTable tbody td:nth-child(3),
       #b1gTable thead th:nth-child(4), #b1gTable tbody td:nth-child(4){display:none}
@@ -120,7 +123,7 @@
       <h2 id="apHeader">AP Top 25 — Weekly Slate</h2>
       <div class="meta">
         <span class="badge" id="apCount">0 teams</span>
-        <span class="muted tiny" id="apNote">AP / Coaches / T-Rank + poll points (1st-place votes)</span>
+        <span class="muted tiny" id="apNote">AP / Coaches + poll points (1st-place votes)</span>
       </div>
       <div class="cardbox"><div class="scroller">
         <table class="weekboard" id="apTable"><thead></thead><tbody></tbody></table>
@@ -150,14 +153,12 @@
     </section>
 
     <div class="muted tiny" style="margin-top:8px" id="footer">
-      Sources: ESPN (polls, schedules, scores, standings) and Bart Torvik T-Rank. Times shown in ET.
+      Sources: ESPN (polls, schedules, scores, standings). Times shown in ET.
     </div>
   </div>
 
   <script>
   // ========= CONFIG =========
-  // Apps Script web app URL (ends in /exec) — only used for T-Rank now:
-  const API_URL = "https://script.google.com/macros/s/AKfycbxiyS3UszPSWazCplXSAICZpw3LeffOpz-eg8qH6J3GTV_4JnVRyFHV5WArj7g8Mmue/exec";
   const TZ = "America/New_York";
   const LIVE_REFRESH_MS = 60 * 1000;        // while any game on the board is live
   const IDLE_REFRESH_MS = 10 * 60 * 1000;   // current week, nothing live
@@ -190,28 +191,16 @@
     load(true);
   }
 
-  // ========= DATA (straight from ESPN in the browser; T-Rank via Apps Script) =========
+  // ========= DATA (straight from ESPN in the browser) =========
   const ESPN    = 'https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball';
   const ESPN_V2 = 'https://site.api.espn.com/apis/v2/sports/basketball/mens-college-basketball';
   const ILLINOIS_ID = '356';
   const BIG_TEN_IDS = ['356','2509','84','130','127','194','275','2294','135','158','77','213','164','120','26','30','2483','264'];
-  const BASE_MAX_AGE_MS = 30 * 60 * 1000;   // re-pull polls/standings/T-Rank every 30 min
+  const BASE_MAX_AGE_MS = 30 * 60 * 1000;   // re-pull polls/standings every 30 min
 
-  // Torvik name → ESPN name, for names that don't normalize the same. More can go on the sheet's Aliases tab.
-  const BUILTIN_ALIASES = {
-    'connecticut':'uconn', 'mississippi':'ole miss', 'n.c. state':'nc state', 'miami fl':'miami', 'miami oh':'miami (oh)',
-    'liu':'long island university', 'liu brooklyn':'long island university', 'illinois chicago':'uic',
-    'louisiana lafayette':'louisiana', 'texas a&m corpus chris':'texas a&m-corpus christi', 'umkc':'kansas city',
-    'fiu':'florida international', 'fau':'florida atlantic', 'usc upstate':'south carolina upstate', 'nicholls st.':'nicholls',
-    'mcneese st.':'mcneese', 'arkansas little rock':'little rock', 'tennessee martin':'ut martin', 'st. francis pa':'saint francis',
-    'grambling st.':'grambling', 'seattle':'seattle u', 'detroit':'detroit mercy', 'iupui':'iu indianapolis', 'iu indy':'iu indianapolis',
-    'queens':'queens university', 'loyola md':'loyola maryland', 'hawaii':"hawai'i", 'sam houston st.':'sam houston',
-    'college of charleston':'charleston', 'southeast missouri st.':'southeast missouri state', 'texas rio grande valley':'ut rio grande valley'
-  };
-
-  let base = null, baseAt = 0, trankData = null;
+  let base = null, baseAt = 0;
   const dayCache = new Map();      // 'YYYYMMDD' → [games]
-  const teamReg = new Map();       // espn id → team object (for names + T-Rank matching)
+  const teamReg = new Map();       // espn id → team object (for names)
 
   async function getJSON(url){
     const r = await fetch(url, { cache: 'no-store' });
@@ -222,31 +211,30 @@
   function reg(t){ if (t && t.id != null && !teamReg.has(String(t.id))) teamReg.set(String(t.id), t); }
   function tname(t){ return t.location || t.shortDisplayName || t.displayName || t.name; }
 
-  function norm(s){
-    let t = String(s || '').toLowerCase().trim();
-    t = t.replace(/[‘’‚‛′‵']/g, '').replace(/\./g, '').replace(/[()]/g, ' ').replace(/-/g, ' ');
-    t = t.replace(/\s+/g, ' ').trim();
-    t = t.replace(/^st /, 'saint ').replace(/ st$/, ' state').replace(/ st /g, ' state ').replace(/\bsaint\b/g, 'st');
-    return t;
-  }
-
   async function loadBase(){
     const errs = [];
     const s = season();
-    const [rk, st, sch, tr] = await Promise.all([
+    const [rk, st, sch] = await Promise.all([
       getJSON(ESPN + '/rankings').catch(e => (errs.push('polls: ' + e.message), null)),
       getJSON(ESPN_V2 + '/standings?group=7&season=' + s).catch(e => (errs.push('standings: ' + e.message), null)),
-      getJSON(ESPN + '/teams/' + ILLINOIS_ID + '/schedule?season=' + s + '&seasontype=2').catch(e => (errs.push('Illini schedule: ' + e.message), null)),
-      /PASTE_YOUR/.test(API_URL) ? Promise.resolve(null)
-        : getJSON(API_URL).catch(e => (errs.push('T-Rank: ' + e.message), null))
+      getJSON(ESPN + '/teams/' + ILLINOIS_ID + '/schedule?season=' + s + '&seasontype=2').catch(e => (errs.push('Illini schedule: ' + e.message), null))
     ]);
     const b = { errs };
 
     // polls
-    const pack = r => !r ? null : { headline: r.headline || r.name || '', ranks: (r.ranks || []).map(x => {
-      reg(x.team);
-      return { id: String(x.team.id), name: tname(x.team), rank: x.current, prev: x.previous, pts: x.points, fpv: x.firstPlaceVotes || 0, rec: x.recordSummary || '' };
-    })};
+    const pack = r => {
+      if (!r) return null;
+      const ranks = (r.ranks || []).map(x => {
+        reg(x.team);
+        return { id: String(x.team.id), name: tname(x.team), rank: x.current, prev: x.previous, pts: x.points, fpv: x.firstPlaceVotes || 0, rec: x.recordSummary || '' };
+      });
+      // "Others receiving votes", ordered by points; continues the numbering (26, 27…), ties share a number
+      const rv = (r.others || []).filter(x => x.team && x.points > 0)
+        .sort((a, b) => b.points - a.points)
+        .map(x => { reg(x.team); return { id: String(x.team.id), name: tname(x.team), pts: x.points, rec: x.recordSummary || '', rv: true }; });
+      rv.forEach((x, i) => { x.rank = (i > 0 && x.pts === rv[i-1].pts) ? rv[i-1].rank : ranks.length + i + 1; });
+      return { headline: r.headline || r.name || '', ranks, rv };
+    };
     const rl = (rk && rk.rankings) || [];
     b.ap = pack(rl.find(r => r.type === 'ap' || /^ap/i.test(r.name || '')));
     b.coaches = pack(rl.find(r => r.type === 'usa' || /coach/i.test(r.name || '')));
@@ -283,7 +271,6 @@
       seen.add(id); b.ooc.push(id);
     }));
 
-    if (tr && tr.ok) trankData = tr;
     base = b; baseAt = Date.now();
   }
 
@@ -314,24 +301,6 @@
     dayCache.set(ymd, (j.events || []).map(compactGame).filter(Boolean));
   }
 
-  function matchTRank(){
-    const out = {};
-    if (!trankData) return out;
-    const alias = {};
-    Object.entries(BUILTIN_ALIASES).forEach(([k,v]) => alias[norm(k)] = norm(v));
-    (trankData.aliases || []).forEach(([k,v]) => alias[norm(k)] = norm(v));
-    const byName = {};
-    teamReg.forEach((t, id) => {
-      const school = t.displayName && t.name ? t.displayName.replace(new RegExp('\\s*' + t.name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '$'), '') : '';
-      [t.location, t.shortDisplayName, school, t.abbreviation].forEach(n => { const k = norm(n); if (k && !byName[k]) byName[k] = id; });
-    });
-    (trankData.trank || []).forEach(([rank, team]) => {
-      const k = norm(team); const id = byName[alias[k] || k] || byName[k];
-      if (id && out[id] == null) out[id] = rank;
-    });
-    return out;
-  }
-
   async function load(showLoading, isAuto){
     clearTimeout(refreshTimer);
     const mon = curMonday, wk = mon.format('YYYY-MM-DD');
@@ -353,7 +322,7 @@
         week: wk, generated: new Date().toISOString(), illinoisId: ILLINOIS_ID,
         live: games.some(g => g.state === 'in'),
         ap: base.ap, coaches: base.coaches, bigTen: base.bigTen, ooc: base.ooc,
-        trank: matchTRank(), teams, games
+        teams, games
       };
       buildCtx(); render();
       if (base.errs.length) showErr('Some data didn’t load: ' + base.errs.join(' · ')); else hideErr();
@@ -377,7 +346,9 @@
     const ap = new Map(), cc = new Map();
     ((D.ap && D.ap.ranks) || []).forEach(r => ap.set(r.id, r));
     ((D.coaches && D.coaches.ranks) || []).forEach(r => cc.set(r.id, r));
-    const tr = new Map(Object.entries(D.trank || {}).map(([k,v]) => [k, Number(v)]));
+    const apRV = new Map(), ccRV = new Map();
+    ((D.ap && D.ap.rv) || []).forEach(r => apRV.set(r.id, r));
+    ((D.coaches && D.coaches.rv) || []).forEach(r => ccRV.set(r.id, r));
     const byTeam = new Map();
     const push = (id, g) => { if (!byTeam.has(id)) byTeam.set(id, []); byTeam.get(id).push(g); };
     (D.games || []).forEach(g => {
@@ -386,7 +357,7 @@
       push(g.a.id, Object.assign({}, g, { isHome:false, me:g.a, opp:g.h }));
     });
     byTeam.forEach(arr => arr.sort((a,b) => a.start < b.start ? -1 : 1));
-    ctx = { ap, cc, tr, byTeam };
+    ctx = { ap, cc, apRV, ccRV, byTeam };
   }
 
   // ========= RENDER HELPERS =========
@@ -398,18 +369,17 @@
 
   function rankInline(id){
     const parts = [];
-    if (ctx.ap.has(id)) parts.push('AP #' + ctx.ap.get(id).rank);
-    if (ctx.cc.has(id)) parts.push('C #' + ctx.cc.get(id).rank);
-    if (ctx.tr.has(id)) parts.push('TR #' + ctx.tr.get(id));
+    if (ctx.ap.has(id)) parts.push('AP #' + ctx.ap.get(id).rank); else if (ctx.apRV.has(id)) parts.push('AP RV');
+    if (ctx.cc.has(id)) parts.push('C #' + ctx.cc.get(id).rank); else if (ctx.ccRV.has(id)) parts.push('C RV');
     return parts.length ? ' <span class="tiny muted">(' + parts.join(' • ') + ')</span>' : '';
   }
 
   function rankChips(id){
-    const ap = ctx.ap.get(id), cc = ctx.cc.get(id), tr = ctx.tr.get(id);
+    const ap = ctx.ap.get(id), cc = ctx.cc.get(id);
+    const lab = (r, rvMap, L) => r ? L + ' #' + r.rank : (rvMap.has(id) ? L + ' RV' : L + ' —');
     return '<div class="rankline">' +
-      '<span class="chip">' + (ap ? 'AP #' + ap.rank : 'AP —') + '</span>' +
-      '<span class="chip">' + (cc ? 'Coaches #' + cc.rank : 'Coaches —') + '</span>' +
-      '<span class="chip ' + (tr && tr <= 25 ? 'good' : '') + '">' + (tr ? 'TR #' + tr : 'TR —') + '</span>' +
+      '<span class="chip">' + lab(ap, ctx.apRV, 'AP') + '</span>' +
+      '<span class="chip">' + lab(cc, ctx.ccRV, 'Coaches') + '</span>' +
     '</div>';
   }
 
@@ -423,26 +393,26 @@
 
   function pollLine(label, r){
     if (!r) return '<div class="rankline"><span class="chip">' + label + ' —</span></div>';
-    return '<div class="rankline"><span class="chip">' + label + ' #' + r.rank + '</span>' +
-      (r.pts ? '<span class="chip">Pts ' + r.pts + (r.fpv ? ' (' + r.fpv + ')' : '') + '</span>' : '') +
+    return '<div class="rankline"><span class="chip">' + label + (r.rv ? ' RV' : ' #' + r.rank) + '</span>' +
+      (r.pts ? '<span class="chip' + (r.rv ? '' : ' pts') + '">Pts ' + r.pts + (r.fpv ? ' (' + r.fpv + ')' : '') + '</span>' : '') +
     '</div>';
   }
 
   function recordFor(id){
     const b = (D.bigTen || []).find(t => t.id === id);
     if (b && b.overall) return b.overall;
-    const r = ctx.ap.get(id) || ctx.cc.get(id);
+    const r = ctx.ap.get(id) || ctx.cc.get(id) || ctx.apRV.get(id) || ctx.ccRV.get(id);
     return r && r.rec ? r.rec : '';
   }
 
   function teamInfoBlock(id, headlineRank){
-    const ap = ctx.ap.get(id), cc = ctx.cc.get(id), tr = ctx.tr.get(id);
+    const ap = ctx.ap.get(id) || ctx.apRV.get(id), cc = ctx.cc.get(id) || ctx.ccRV.get(id);
     const rec = recordFor(id);
     return '<div><strong>' + (headlineRank ? '#' + headlineRank + ' ' : '') + nameHtml(id) + '</strong>' +
       (headlineRank ? moveArrow(ap) : '') +
       '<div class="ranklines">' +
         pollLine('AP', ap) + pollLine('Coaches', cc) +
-        '<div class="rankline"><span class="chip ' + (tr && tr <= 25 ? 'good' : '') + '">' + (tr ? 'T-Rank #' + tr : 'T-Rank —') + '</span>' +
+        '<div class="rankline">' +
         '<span class="chip">' + (rec || 'Record —') + '</span></div>' +
       '</div></div>';
   }
@@ -503,13 +473,16 @@
 
     // AP
     const apRanks = (D.ap && D.ap.ranks) || [];
-    document.getElementById('apHeader').textContent = 'AP Top ' + (apRanks.length || 25) + ' — Weekly Slate';
-    document.getElementById('apCount').textContent = apRanks.length + ' teams';
+    const apRV = (D.ap && D.ap.rv) || [];
+    document.getElementById('apHeader').textContent = 'AP Top ' + (apRanks.length || 25) + (apRV.length ? ' + Receiving Votes' : '') + ' — Weekly Slate';
+    document.getElementById('apCount').textContent = apRanks.length + ' ranked' + (apRV.length ? ' · ' + apRV.length + ' receiving votes' : '');
     document.getElementById('apNote').textContent =
-      (D.ap && D.ap.headline ? D.ap.headline + ' · ' : '') + 'AP / Coaches / T-Rank + poll points (1st-place votes)';
+      (D.ap && D.ap.headline ? D.ap.headline + ' · ' : '') + 'AP / Coaches + poll points (1st-place votes)';
     const apT = document.getElementById('apTable'); weekHeader(apT);
     apT.querySelector('tbody').innerHTML = apRanks.map(r =>
-      '<tr><th class="sticky teamCol">' + teamInfoBlock(r.id, r.rank) + '</th>' + dayCells(r.id) + '</tr>').join('') ||
+      '<tr><th class="sticky teamCol">' + teamInfoBlock(r.id, r.rank) + '</th>' + dayCells(r.id) + '</tr>').join('') +
+      (apRV.length ? '<tr class="rvDivider"><th class="sticky teamCol">Receiving votes</th><td colspan="7"></td></tr>' +
+        apRV.map(r => '<tr><th class="sticky teamCol">' + teamInfoBlock(r.id, r.rank) + '</th>' + dayCells(r.id) + '</tr>').join('') : '') ||
       '<tr><td class="muted tiny" colspan="8">No AP poll yet.</td></tr>';
 
     // Illinois OOC
@@ -523,7 +496,7 @@
     const b1g = (D.bigTen || []).slice().sort((a,b) => (b.pct - a.pct) || (b.w - a.w) || (b.confPct - a.confPct));
     document.getElementById('b1gCount').textContent = b1g.length + ' teams';
     const bT = document.getElementById('b1gTable');
-    weekHeader(bT, '<th>Overall</th><th>Conf</th><th>AP / Coaches / TR</th>');
+    weekHeader(bT, '<th>Overall</th><th>Conf</th><th>AP / Coaches</th>');
     bT.querySelector('tbody').innerHTML = b1g.map(t =>
       '<tr><th class="sticky teamCol"><strong>' + nameHtml(t.id) + '</strong><div class="only-mobile">' +
         '<div class="tiny muted">' + (t.overall || '—') + ' · Conf ' + (t.conf || '—') + '</div>' + rankChips(t.id) + '</div></th>' +
