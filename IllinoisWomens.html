@@ -244,9 +244,28 @@
       rv.forEach((x, i) => { x.rank = (i > 0 && x.pts === rv[i-1].pts) ? rv[i-1].rank : ranks.length + i + 1; });
       return { headline: r.headline || r.name || '', ranks, rv };
     };
-    const rl = (rk && rk.rankings) || [];
-    b.ap = pack(rl.find(r => r.type === 'ap' || /^ap/i.test(r.name || '')));
-    b.coaches = pack(rl.find(r => r.type === 'usa' || /coach/i.test(r.name || '')));
+    const rl = ((rk && rk.rankings) || []).filter(r => (r.ranks || []).length);   // skip polls ESPN lists before they're filled in
+    const isAP = r => r.type === 'ap' || /^ap\b|associated press/i.test(r.name || r.shortName || '');
+    const isCC = r => /^(usa|coaches?)$/i.test(r.type || '') || /coach|usa today/i.test((r.name || '') + ' ' + (r.shortName || ''));
+    b.ap = pack(rl.find(isAP));
+    b.coaches = pack(rl.find(isCC));
+    // ESPN sometimes posts the new AP poll before the new Coaches poll (or drops it from the feed for a while).
+    // Fall back to the previous week's Coaches poll, then to the last one this device saw.
+    if (!b.coaches) {
+      const wk = rk && (rk.latestWeek || (rk.rankings || []).map(r => r.occurrence).find(Boolean));
+      const n = wk && +(wk.number || wk.value);
+      if (n > 1) {
+        const prev = await getJSON(ESPN + '/rankings?seasontype=2&week=' + (n - 1)).catch(() => null);
+        const pr = ((prev && prev.rankings) || []).filter(r => (r.ranks || []).length).find(isCC);
+        if (pr) { b.coaches = pack(pr); b.coaches.stale = true; }
+      }
+    }
+    const CK = 'illiniBoard.womens.coaches';
+    try {
+      if (b.coaches && !b.coaches.stale) localStorage.setItem(CK, JSON.stringify(b.coaches));
+      else if (!b.coaches) { const c = JSON.parse(localStorage.getItem(CK) || 'null'); if (c && c.ranks && c.ranks.length) { b.coaches = c; c.stale = true; } }
+    } catch (e) {}
+    if (!b.coaches) errs.push('Coaches poll not in ESPN feed yet');
 
     // Big Ten standings
     let entries = [];
@@ -507,7 +526,8 @@
     document.getElementById('apHeader').textContent = 'AP Top ' + (apRanks.length || 25) + (apRV.length ? ' + Receiving Votes' : '') + ' — Weekly Slate';
     document.getElementById('apCount').textContent = apRanks.length + ' ranked' + (apRV.length ? ' · ' + apRV.length + ' receiving votes' : '');
     document.getElementById('apNote').textContent =
-      (D.ap && D.ap.headline ? D.ap.headline + ' · ' : '') + 'AP / Coaches + poll points (1st-place votes)';
+      (D.ap && D.ap.headline ? D.ap.headline + ' · ' : '') + 'AP / Coaches + poll points (1st-place votes)' +
+      (D.coaches && D.coaches.stale ? ' · Coaches: ' + (D.coaches.headline || 'previous poll') + ' (new one not posted yet)' : '');
     const apT = document.getElementById('apTable'); weekHeader(apT);
     apT.querySelector('tbody').innerHTML = apRanks.map(r =>
       '<tr><th class="sticky teamCol">' + teamInfoBlock(r.id, r.rank) + '</th>' + dayCells(r.id) + '</tr>').join('') +
