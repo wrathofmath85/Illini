@@ -299,13 +299,19 @@
     (comp.broadcasts || []).forEach(b => (b.names || []).forEach(n => tv.includes(n) || tv.push(n)));
     if (!tv.length) (comp.geoBroadcasts || []).forEach(b => { const n = b.media && b.media.shortName; if (n && !tv.includes(n)) tv.push(n); });
     const v = comp.venue || {};
+    const recOf = c => {   // overall W-L as ESPN shows it on this game
+      const rs = c.records || c.record || [];
+      const r = rs.find(x => x.type === 'total' || /overall/i.test(x.name || '')) || rs[0];
+      const m = r && String(r.summary || r.displayValue || '').match(/^(\d+)-(\d+)$/);
+      return m ? m[1] + '-' + m[2] : '';
+    };
     return {
       id: ev.id, start: ev.date, state: type.state || 'pre', done: !!type.completed,
       detail: type.shortDetail || type.detail || '', canceled: /cancel|postpon/i.test(type.name || ''),
       neutral: !!comp.neutralSite, conf: !!comp.conferenceCompetition, tv: tv.join(', '),
       venue: v.fullName || '', city: (v.address && v.address.city) || '', st: (v.address && v.address.state) || '',
-      h: { id: String(home.team.id), s: home.score != null ? String(home.score) : '' },
-      a: { id: String(away.team.id), s: away.score != null ? String(away.score) : '' }
+      h: { id: String(home.team.id), s: home.score != null ? String(home.score) : '', rec: recOf(home) },
+      a: { id: String(away.team.id), s: away.score != null ? String(away.score) : '', rec: recOf(away) }
     };
   }
 
@@ -413,8 +419,18 @@
   }
 
   function recordFor(id){
+    // freshest source: scoreboard records on this week's games (poll records are frozen at poll release)
+    let best = '', bestGp = -1;
+    (ctx.byTeam.get(id) || []).forEach(g => {
+      const m = String(g.me.rec || '').match(/^(\d+)-(\d+)$/);
+      if (m && +m[1] + +m[2] > bestGp) { bestGp = +m[1] + +m[2]; best = g.me.rec; }
+    });
     const b = (D.bigTen || []).find(t => t.id === id);
-    if (b && b.overall) return b.overall;
+    if (b && b.overall) {
+      const m = b.overall.match(/^(\d+)-(\d+)$/);
+      if (!best || (m && +m[1] + +m[2] >= bestGp)) return b.overall;
+    }
+    if (best) return best;
     const r = ctx.ap.get(id) || ctx.cc.get(id) || ctx.apRV.get(id) || ctx.ccRV.get(id);
     return r && r.rec ? r.rec : '';
   }
